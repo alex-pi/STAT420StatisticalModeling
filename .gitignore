@@ -1,0 +1,78 @@
+# Compiled source #
+###################
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.pyc
+
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.war
+*.ear
+*.zip
+
+# OS generated files #
+######################
+*~
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
+
+
+# Targets #
+target/*
+*/target/*
+*/target/**/*.*
+*/*/target/*
+*/*/*/*/target/*
+*/*/*/target/*
+pom.properties
+
+# IDE's #
+.settings
+.project
+.classpath
+.cache
+.idea
+*.iml
+*/.Rproj./*
+*/.Rproj.user/*
+
+# Respaldos #
+*.bak
+*.swp
+
+# Merge tools #
+*.orig
+/java-tests/java-tests/nbproject/private/
+/java-tests/nbproject/private/
+/java-tests/build/
+
+# SMP #
+FemtoCell/SMP/csc/overlays/
+rebel.xml
+rebel-remote.xml
+
+# Maven #
+**/overlays
+
+# Logs #
+velocity.log*
+smp_tests.log*

@@ -1,0 +1,11 @@
+x,y,z
+1,hello,TRUE
+3,hello,FALSE
+5,hello,TRUE
+7,hello,FALSE
+9,hello,TRUE
+1,hello,FALSE
+3,hello,TRUE
+5,hello,FALSE
+7,hello,TRUE
+9,Bye,FALSE

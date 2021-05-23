@@ -1,0 +1,55 @@
+---
+title: "my-first-rmd"
+author: "AP"
+date: "5/19/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Header 1
+
+# Header 2
+
+## Subheader
+
+Some text here. **bold text** *italic text*
+
+- List element.
+- List element.
+- List element.
+
+- [Google](www.google.com)
+- [RMarkdown Documentation](http://rmarkdown.rstudio.com)
+
+| Tables   |      Are      |  Cool |
+|----------|:-------------:|------:|
+| col 1 is |  left-aligned | $1600 |
+| col 2 is |    centered   |   $12 |
+| col 3 is | right-aligned |    $1 |
+
+```{r}
+x <- 1:10
+y <- x * 3
+x + y
+```
+
+```{r, echo = FALSE, fig.height = 4, fig.width = 4}
+hist(y)
+```
+
+```{r, message = FALSE, warning = FALSE}
+z <- c(1, 1, 2, 3, 5, 8)
+z + x
+```
+
+```{r}
+library(readr)
+ex_from_csv <- read_csv("example-data.csv") # faster, tibble
+ex_from_csv$y
+```
+
+$$
+s = \sqrt{c - 1}
+$$
+
