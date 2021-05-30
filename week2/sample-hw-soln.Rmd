@@ -1,0 +1,91 @@
+---
+title: "Week 0 - Homework Sample"
+author: "STAT 420, D. Unger"
+date: ''
+output:
+  html_document: 
+    theme: readable
+    toc: yes
+urlcolor: cyan
+---
+
+
+# Overview
+
+The purpose of this file is just to showcase some basics of how you might choose to construct your HW submissions. The first one is done for you as an example. You are encouraged to complete the rest on your own.
+
+
+**Student Submission:** This is what your submission might look like. 
+
+***
+
+## Exercise 1 (Arithmetic)
+
+For this exercise, we will practice some basic operations using R.
+
+**(a)** What is 8 + 3?
+
+**Solution:**
+
+```{r}
+8 + 3
+```
+
+**(b)** What is 4 - 9?
+
+**Solution:**
+
+```{r}
+4 - 9
+```
+
+**(c)** If you owned 10 apples and sold 2 to your friend, how many apples do you have left? Store the result in an object called `apples`.
+
+**Solution:**
+Notice that parts (c) and (d) both utilize inline `R` coding. This is far preferable to copying and pasting numeric results into your text responses. Even though the answer appears inline, you should stil include the computed `R` chunk so that we can see your `R` work in the report file.
+
+```{r}
+apples = 10 - 2
+apples
+```
+
+I would have `r apples` apples left.
+
+**(d)** If you sold those 2 apples for $7 each, how much money have you made?
+
+**Solution:**
+
+```{r, solution = TRUE}
+2 * 7
+```
+
+I would have made $`r 2 * 7` from selling 2 apples to my friend.
+
+**(e)** What kind of friend are you if you **sell** your apples to your friend (and at a ridiculous markup of $7 each!!!)?
+
+**Solution:**
+
+You're a terrible friend.
+
+
+## Exercise 2 (Add-ons)
+
+**(a)** What is 8 + 3? Don't use `R` this time. Just write the expression and answer in `LaTeX`.
+
+**Solution:**
+
+$$ 8 + 3 = 11 $$
+
+**(b)** Insert an image of a statistics joke from your computer. Hint: This is easiest if the image file is in the same folder as this RMD file.
+
+**Solution:**
+
+![](NormalDistributionsPun.jpg)
+
+**(c)** Insert an image of a statistics joke from the internet.
+
+**Solution:**
+
+![*Self-Description* from [xkcd.com](www.xkcd.com)](https://imgs.xkcd.com/comics/self_description.png)
+
+

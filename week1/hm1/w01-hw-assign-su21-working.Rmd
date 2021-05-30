@@ -342,6 +342,8 @@ z = runif(150, min = 0, max = 1)
 Provide your function, as well as the result of running the following code:
 
 ```{r}
+?sample
+sample(x, k)
 x
 k <- 3
 (x_mean <- mean(x))

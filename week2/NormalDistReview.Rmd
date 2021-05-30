@@ -1,0 +1,159 @@
+---
+title: "NormalDistribution"
+author: "AP"
+date: "5/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+IQ scores follow a Normal Distribution with mean 100 and standard deviation 15
+
+$$
+X \sim N(\mu = 100, \sigma^2 = 15^2)
+$$
+
+What is the probability of person having IQ below 115
+We get this with CDF, Cumulative Dist Function.
+Basically is the cummulative probability from -infinity to 115
+
+p in pnorm stands for Probability
+
+```{r}
+(pnorm(115, mean = 100, sd = 15))
+```
+
+Standarizing a variable
+If we do this to variable X we get the Standard Norm
+
+$$
+Z = \frac{X - \mu}{\sigma} \sim N(0, 1)
+$$
+
+Where is 115 located with respect to the mean?
+Answer, 115 if 1 standard deviation from the mean
+
+
+```{r}
+(115 - 100) / 15
+?pnorm
+```
+
+
+By default pnorm uses mean 0 and sd = 1, so pnorm(1) gives the same value
+
+```{r}
+pnorm(1)
+```
+
+What is the height of the density curve at an IQ of 115?
+This is not cumulative, just the density (% of samples) at exactly 115
+
+```{r}
+dnorm(115, mean = 100, sd = 15)
+# At 85 is the same because 85 and 115 are 1 sd from the mean
+dnorm(85, mean = 100, sd = 15)
+
+```
+Probability of a person to have IQ of 115 or less
+Again, note how this is cumulative probability from -inf to 115
+
+```{r}
+pnorm(115, mean = 100, sd = 15)
+```
+
+
+
+Probability of a person to have IQ between 100 and 115
+Note that 0.3413447 * 2 is density within 1 standard deviation which matches with
+the rule of 68% of density being 1 sd from the mean in a norm dist
+
+```{r}
+pnorm(115, mean = 100, sd = 15) - pnorm(100, mean = 100, sd = 15)
+```
+
+R norm functions are vectorized
+
+```{r}
+pnorm(c(100, 115), mean = 100, sd = 15)
+diff(pnorm(c(100, 115), mean = 100, sd = 15))
+```
+
+Probability of a person to have IQ > 130
+
+```{r}
+1 - pnorm(130, mean = 100, sd = 15)
+pnorm(130, mean = 100, sd = 15, lower.tail = FALSE)
+```
+What IQ is needed to be in the top 5%?
+
+$$
+P[X > c] = 0.05
+$$
+
+qnorm is the opposite of pnorm in the sense that we get X given a probability p
+
+```{r}
+# The IQ needed to be in the lower 5% (not very smart people :P)
+qnorm(0.05, mean = 100, sd = 15)
+?qnorm
+# If get the tail on the right we have the IQ needed to be in the top 5% (smarter people... so to speak) 
+qnorm(0.05, mean = 100, sd = 15, lower.tail = FALSE)
+# Another way to do it is to get the IQ where the Probability density reaches 95%
+qnorm(0.95, mean = 100, sd = 15)
+```
+
+What is the probability that someone has an IQ more than 2 sd from the mean?
+
+```{r}
+left_side <- pnorm((100 - (2 * 15)), mean = 100, sd = 15)
+right_side <- pnorm((100 + (2 * 15)), mean = 100, sd = 15, lower.tail = FALSE)
+left_side + right_side
+
+# A smarter way to do it
+1 - diff(pnorm(c(70, 130), mean = 100, sd = 15))
+# Since the distribution is symmetrical, this also works 
+pnorm(70, mean = 100, sd = 15) * 2
+```
+
+Note the we get the same value from above with defaults for sd and mean (1, 0),
+which is the standard normal distribution
+
+```{r}
+# Values located more than -2 * sd from the mean
+pnorm(-2) * 2
+```
+
+Get 20 random samples from the distribution
+
+```{r}
+rnorm(20, mean = 100, sd = 15)
+```
+
+# Vectorization
+
+We can get many values from different distributions at the same time
+
+```{r}
+pnorm(c(0.5, 1, 0), mean = c(-1, 0, 1), sd = c(2, 1, 0.5))
+
+pnorm(0, mean = c(-1, 0, 1), sd = c(2, 1, 0.5))
+```
+
+## Other Continuous distributions
+
+```{r}
+dexp(2, rate=0.5)
+
+```
+
+
+
+
+
+
+
+
+

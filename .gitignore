@@ -76,3 +76,4 @@ rebel-remote.xml
 # Logs #
 velocity.log*
 smp_tests.log*
+.Rproj.user

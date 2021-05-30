@@ -1,0 +1,134 @@
+---
+title: "quiz-week2"
+author: "AP"
+date: "5/27/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Week 2 Quiz
+
+# Question 1
+
+Consider the simple linear regression model 
+
+$$Y = 10 + 5x + \epsilon$$
+
+where 
+
+$$\epsilon \sim N(0, \sigma^2 = 16)$$
+
+Calculate the probability that Y is less than 6 given that x = 0.
+Again, 68% of the prob density is in the range of 1 sd from the mean, here sd is 4
+
+```{r}
+pnorm(4, mean = 0, sd = 4) - pnorm(-4, mean = 0, sd = 4)
+```
+```{r}
+pnorm(6, mean = 10, sd = 4)
+```
+
+# Question 2
+
+Using the SLR model in Question 1, what is the probability that Y is greater than 3 given that x = -1?
+
+```{r}
+(expected_y <- 10 + 5*(-1))
+pnorm(3, mean = expected_y, sd = 4, lower.tail = FALSE)
+```
+
+# Question 3
+
+Using the SLR model in Question 1, what is the probability that YY is greater than 3 given that x = -2?
+
+```{r}
+(expected_y <- 10 + 5*(-2))
+pnorm(3, mean = expected_y, sd = 4, lower.tail = FALSE)
+```
+# Question 4
+
+Suppose we would like to predict the duration of an eruption of the Old Faithful geyser in Yellowstone National Park based on the waiting time before an eruption. Fit a simple linear model in R that accomplishes this task
+
+What is the estimate of the intercept parameter?
+
+```{r}
+?faithful
+f_fit <- lm(eruptions ~ waiting, data = faithful)
+f_fit$coefficients[1]
+```
+
+# Question 5
+
+What is the estimate of the slope parameter?  
+
+```{r}
+f_fit$coefficients[2]
+plot(eruptions ~ waiting, data = faithful)
+abline(f_fit)
+```
+
+# Question 6
+
+Use the fitted model to predict the duration of an eruption based on a waiting time of 80 minutes.
+
+```{r}
+predict(f_fit, newdata = data.frame(waiting = 80))
+```
+
+# Question 7
+
+Use the fitted model to predict the duration of an eruption based on a waiting time of 120 minutes.
+
+```{r}
+predict(f_fit, newdata = data.frame(waiting = 120))
+```
+
+# Question 8
+
+Of the predictions that you made for 80 and 120 minutes, which is more reliable?
+
+```{r}
+# 80 is more reliable because 120 is out of range of the observed data
+max(faithful$waiting)
+min(faithful$waiting)
+faithful[faithful$waiting == 80, ]
+```
+
+# Question 9
+
+Calculate the RSS for the fitted model. 
+RSS means Residual Sum of Squares
+
+```{r}
+y <- faithful$eruptions
+y_hat <- predict(f_fit, newdata = faithful)
+RSS <- sum((y - y_hat) ^ 2)
+```
+
+# Question 10
+
+What proportion of the variation in eruption duration is explained by the linear relationship with waiting time?
+
+```{r}
+TSS <- sum((y - mean(y)) ^ 2)
+RegSS <- sum((y_hat - mean(y)) ^ 2)
+RegSS / TSS
+```
+
+# Question 11
+
+Calculate the standard deviation of the residuals of the fitted model.
+
+```{r}
+summary(f_fit)
+names(f_fit)
+sd(f_fit$residuals)
+
+sd(y - y_hat)
+```
+

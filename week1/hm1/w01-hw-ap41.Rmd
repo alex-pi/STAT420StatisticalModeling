@@ -6,7 +6,7 @@ output:
   html_document: 
     theme: readable
     toc: yes
-    highlight: pygments
+    highlight: kate
   pdf_document: default
 urlcolor: cyan
 ---
@@ -184,7 +184,7 @@ hist(nutrition$Calories,
 
 Since the tail of the histogram goes to the right the distribution is skewed right. Something unusual is that the tail of the histogram has a peak for values between 850 and 900.
 
-In other words, the data has a group of considerable size with high Calorie values. I thought it will be interesting to see them:
+In other words, the tail of the histogram has a group of considerable size with high Calorie values. I thought it will be interesting to see them:
 
 ```{r}
 library(knitr)
