@@ -9,6 +9,8 @@ output:
     highlight: kate
   pdf_document: default
 urlcolor: cyan
+editor_options: 
+  chunk_output_type: console
 ---
 
 ***
@@ -19,12 +21,16 @@ For this exercise, we will use the `msleep` dataset from the `ggplot2` package.
 
 **(a)** Install and load the `ggplot2` package. **Do not** include the installation command in your `.Rmd` file. (If you do it will install the package every time you knit your file.) **Do** include the command to load the package into your environment.
 
+**Solution**
+
 ```{r}
 library(ggplot2)
 msleep <- ggplot2::msleep
 ```
 
 **(b)** Note that this dataset is technically a `tibble`, not a data frame. How many observations are in this dataset? How many variables? What are the observations in this dataset?
+
+**Solution**
 
 ```{r message=FALSE}
 num_observations <- nrow(msleep)
@@ -39,6 +45,8 @@ description_msleep <- 'The observations show data about sleeping habits of 83 ma
 
 **(c)** What is the mean hours of REM sleep of individuals in this dataset?
 
+**Solution**
+
 ```{r}
 (avg_sleep_rem <- mean(msleep$sleep_rem, na.rm = TRUE))
 ```
@@ -46,11 +54,15 @@ description_msleep <- 'The observations show data about sleeping habits of 83 ma
 
 **(d)** What is the standard deviation of brain weight of individuals in this dataset?
 
+**Solution**
+
 ```{r}
 (sd_brainwt <- sd(msleep$brainwt, na.rm = TRUE))
 ```
 
 **(e)** Which observation (provide the `name`) in this dataset gets the most REM sleep?
+
+**Solution**
 
 ```{r}
 # Get the row number with the max sleep_rem
@@ -61,6 +73,8 @@ max_sleep_rem$name
 ```
 
 **(f)** What is the average bodyweight of carnivores in this dataset?
+
+**Solution**
 
 ```{r}
 # Get the bodywt for carnivores
@@ -77,6 +91,8 @@ carni_bodywt <- msleep[msleep$vore == 'carni', 'bodywt']
 For this exercise, we will use the `birthwt` dataset from the `MASS` package.
 
 **(a)** Note that this dataset is a data frame and all of the variables are numeric. How many observations are in this dataset? How many variables? What are the observations in this dataset?
+
+**Solution**
 
 ```{r}
 library(MASS)
@@ -95,6 +111,8 @@ description_birthwt <- 'The observations show risk factors associated with low i
 
 **(b)** Create a scatter plot of birth weight (y-axis) vs mother's weight before pregnancy (x-axis). Use a non-default color for the points. (Also, be sure to give the plot a title and label the axes appropriately.) Based on the scatter plot, does there seem to be a relationship between the two variables? Briefly explain.
 
+**Solution**
+
 ```{r}
 plot(bwt ~ lwt, data = birthwt,
         xlab = "Mother's weight before pregnancy (pounds)",
@@ -106,9 +124,12 @@ plot(bwt ~ lwt, data = birthwt,
 )
 ```
 
-Given how the data points are spread out, does not seem to be a direct relation between these 2 variables. For instance, in the range of 100-150 in the X axis (Mother's weight), the points are spread up and down in the Y axis. Also, It is easy to find cases of very low and very hign Birth Weights given a Mother's weight.
+Given how the data points are spread out, does not seem to be a direct relation between these 2 variables. In other words, The `Mother's weight` does not explain much of the variability in the `Birth weight` as no obvious tendency is observed.
+
 
 **(c)** Create a scatter plot of birth weight (y-axis) vs mother's age (x-axis). Use a non-default color for the points. (Also, be sure to give the plot a title and label the axes appropriately.) Based on the scatter plot, does there seem to be a relationship between the two variables? Briefly explain.
+
+**Solution**
 
 ```{r}
 plot(bwt ~ age, data = birthwt,
@@ -121,9 +142,11 @@ plot(bwt ~ age, data = birthwt,
 )
 ```
 
-There is no clear tendency of the Birth Weight as the Mother's age increases. 
+There is no clear tendency in the `Birth Weight` as the `Mother's age` increases. Something unrelated but perhaps worth noticing is how the number of events (births) decreases as the `Mother's age` increases.
 
 **(d)** Create side-by-side boxplots for birth weight grouped by smoking status. Use non-default colors for the plot. (Also, be sure to give the plot a title and label the axes appropriately.) Based on the boxplot, does there seem to be a difference in birth weight for mothers who smoked? Briefly explain.
+
+**Solution**
 
 ```{r}
 bp_conf <- boxplot(bwt ~ smoke, data = birthwt,
@@ -139,7 +162,7 @@ no_smoking_median <- bp_conf$stats[3, 1]
 smoking_median <- bp_conf$stats[3, 2]
 ```
 
-For mothers who smoke, the median (`r smoking_median`) is lower compared to mothers who *do not smoke* (`r no_smoking_median`). Additionally the maximum, the third quartile and the first quartile also drop for mothers who smoke. Given that, there seems to be a relation on birth weight reduction when mothers smoke.
+For mothers who smoke, the median (`r smoking_median`) is lower compared to mothers who *do not smoke* (`r no_smoking_median`). Additionally the maximum, the third quartile and the first quartile also drop for mothers who smoke. Given that, there seems to be a relation on `birth weight reduction` when `mothers smoke`.
 
 ***
 
@@ -173,6 +196,8 @@ nutrition <- read_csv("nutrition-2018.csv")
 
 **(a)** Create a histogram of `Calories`. Do not modify `R`'s default bin selection. Make the plot presentable. Describe the shape of the histogram. Do you notice anything unusual?
 
+**Solution**
+
 ```{r}
 hist(nutrition$Calories,
      xlab   = "Calories (kcal)",
@@ -182,9 +207,9 @@ hist(nutrition$Calories,
      )
 ```
 
-Since the tail of the histogram goes to the right the distribution is skewed right. Something unusual is that the tail of the histogram has a peak for values between 850 and 900.
+Since the tail of the histogram goes to the right the distribution we say the histogram is `skewed right`. Something unusual is that the tail of the histogram has a peak for values between 850 and 900.
 
-In other words, the tail of the histogram has a group of considerable size with high Calorie values. I thought it will be interesting to see them:
+In other words, the tail of the histogram has a group of considerable size with high Calorie values. I thought it will be interesting to see some of them:
 
 ```{r}
 library(knitr)
@@ -199,6 +224,8 @@ kable(high_calories_obs[1:10, ], caption = "Food between 850 and 900 Calories")
 
 **(b)** Create a scatter plot of calories (y-axis) vs protein (x-axis). Make the plot presentable. Do you notice any trends? Do you think that knowing only the protein content of a food, you could make a good prediction of the calories in the food?
 
+**Solution**
+
 ```{r}
 plot(Calories ~ Protein, data = nutrition,
         xlab = "Protein (grams)",
@@ -211,14 +238,17 @@ plot(Calories ~ Protein, data = nutrition,
 
 ```
 
-Using only the Calories we won't get a good prediction since matching a line to the data will have a large margin of error. Perhaps getting a higher order feature based on the Calories could give us better predictions.
+As the `Protein` values increase the `Calories` seem to tend to a mid level value close to `400 kcal`. Also most records are located in the range of `0 to 400 kcal` and `0 to 40 grams` of Protein.
+
+Using only the `Proteins` as a linear function with `Calories` to fit a line that attempts to describe this data won't get us very good results. The variability of `Calories` seems to be hard to explain solely as a linear function of `Proteins`. 
+
+Perhaps looking into non linear relations might be fruitful.
 
 **(c)** Create a scatter plot of `Calories` (y-axis) vs `4 * Protein + 4 * Carbs + 9 * Fat` (x-axis). Make the plot presentable. You will either need to add a new variable to the data frame, or use the `I()` function in your formula in the call to `plot()`. If you are at all familiar with nutrition, you may realize that this formula calculates the calorie count based on the protein, carbohydrate, and fat values. You'd expect then that the result here is a straight line. Is it? If not, can you think of any reasons why it is not?
 
-```{r}
-nutrition$CaloriCount = rep(1, nrow(nutrition))
-n <- nutrition
+**Solution**
 
+```{r}
 plot(Calories ~ I(4 * Protein + 4 * Carbs + 9 * Fat), 
         data = nutrition,
         xlab = "Calculated Calorie count",
@@ -230,7 +260,7 @@ plot(Calories ~ I(4 * Protein + 4 * Carbs + 9 * Fat),
      )
 ```
 
-The formula used to get the Calorie Count is a good way to predict the Calories. In other words, it will be close to the real Calories observed but in most cases not exactly the same. Different coefficients could also improve the predictions.
+The formula used to get the `Calorie Count` is a good way to predict the `Calories`. In other words, it will be close to the real `Calories` observed but in most cases not exactly the same, those differences or errors create the deviations from the straight line observed in the graph. 
 
 ***
 
@@ -246,6 +276,8 @@ d = 2 ^ (1:10)
 ```
 
 **(a)** Write a function called `sum_of_squares`.
+
+**Solution**
 
 - Arguments:
     - A vector of numeric data `x`
@@ -273,10 +305,13 @@ sum_of_squares(x = c(c, d))
 
 where the $x$ vector is `d`.
 
+**Solution**
+
 ```{r}
 # Assigning variables to match the formula (makes it easier to follow)
 x <- d
-n <- length(x)
+# n <- length(x)
+n <- sum_of_squares(x = x/x)
 result_b <- sqrt(sum_of_squares(x - 0) / n)
 ```
 
@@ -289,6 +324,8 @@ result_b <- sqrt(sum_of_squares(x - 0) / n)
 \]
 
 where the $x$ vector is `a` and the $y$ vector is `b`.
+
+**Solution**
 
 ```{r}
 # Assigning variables to match the formula (makes it easier to follow)
@@ -325,6 +362,8 @@ z = runif(150, min = 0, max = 1)
 
 Provide your function, as well as the result of running the following code:
 
+**Solution**
+
 ```{r}
 list_extreme_values <- function(x, k = 2) {
   x_mean <- mean(x)
@@ -346,6 +385,8 @@ list_extreme_values(x = z, k = 1.5)
 ```
 
 **(b)** Using only your function `list_extreme_values()`, `mean()`, and basic list operations, calculate the mean of observations that are greater than 1.5 standard deviation above the mean in the vector `y`.
+
+**Solution**
 
 ```{r}
 mean_large_y = mean(list_extreme_values(x = y, k = 1.5)$large)

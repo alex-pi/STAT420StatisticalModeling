@@ -84,7 +84,7 @@ coeff_deter <- summary(cat_model)$r.squared
  
 ```
 
-**`r coeff_deter * 100`%** of the variance in the heart's weight is explained by the body weight. We can say that our model is somewhat giving good predictions but still **`r (1 - coeff_deter) * 100`%** is noise (other unknown factors).
+**`r format(round(coeff_deter * 100, 2), nsmall = 2)`%** of the variance in the heart's weight is explained by the body weight. We can say that our model is somewhat giving good predictions but still **`r format(round((1 - coeff_deter) * 100, 2), nsmall = 2)`%** is noise (other unknown factors).
 
 
 **(d)** Use your model to predict the heart weight of a cat that weights **1.5** kg. Do you feel confident in this prediction? Briefly explain.
@@ -164,7 +164,7 @@ y <- cats$Hwt
 (s_e <- get_sd_est(fitted_vals = y_hat, actual_vals = y))
 ```
 
-The Residual Standard Error indicates that our estimated mean for the hearts weight is wrong in "average" by `r s_e` grams.
+The Residual Standard Error indicates that our estimated mean for the hearts weight is wrong in "average" by **`r s_e` grams**.
 
 **(c)** Run the function `get_sd_est` on the residuals from the model in Exercise 1, with `mle` set to `TRUE`. Explain the resulting estimate in the context of the model. Note that we are trying to estimate the same parameter as in part **(b)**.
 
@@ -174,7 +174,7 @@ The Residual Standard Error indicates that our estimated mean for the hearts wei
 (s_d <- get_sd_est(fitted_vals = y_hat, actual_vals = y, mle = TRUE))
 ```
 
-Using `mle` we get a similar value of `r s_d`. Our mean estimates will be off by `r s_d` grams. For `mle` we use `r nrow(cats)` degrees of freedom and is considered `biased`.
+Using `mle` we get a similar value of **`r s_d`**. Our mean estimates will be off by **`r s_d` grams**. For `mle` we use **`r nrow(cats)`** degrees of freedom and is considered `biased`.
 
 **(d)** To check your work, output `summary(cat_model)$sigma`. It should match at least one of **(b)** or **(c)**.
 
@@ -185,7 +185,7 @@ all.equal(summary(cat_model)$sigma, s_e)
 all.equal(summary(cat_model)$sigma, s_d)
 ```
 
-In this case the model's $$\sigma$$ matches the `Least Squares` estimate.
+In this case the model's $\sigma$ matches the `Least Squares` estimate.
 
 ***
 
@@ -250,9 +250,9 @@ sim_model <- lm(response ~ predictor, data = sim_data)
 (beta_1_hat <- sim_model$coefficients[2])
 ```
 
-The estimated intercept, $\hat\beta_0$ is not as close as $\beta_0$, they differ by `r beta_0 - beta_0_hat`
+The estimated intercept, $\hat\beta_0$ is not as close as $\beta_0$, they differ by **`r beta_0 - beta_0_hat`**
 
-On the other hand, the estimated slope $\hat\beta_1$ is close to $\beta_1$ from the model, difference is only `r beta_1 - beta_1_hat`
+On the other hand, the estimated slope $\hat\beta_1$ is close to $\beta_1$ from the model, difference is only **`r beta_1 - beta_1_hat`**.
 
 **(c)** Plot the data you simulated in part **(a)**. Add the regression line from part **(b)** as well as the line for the true model. Hint: Keep all plotting commands in the same chunk.
 
@@ -319,11 +319,11 @@ head(beta_hat_1)
 **Solution**
 
 ```{r}
-sim_mean <- mean(beta_hat_1)
-sim_sd <- sd(beta_hat_1)
+(sim_mean <- mean(beta_hat_1))
+(sim_sd <- sd(beta_hat_1))
 ```
 
-$\bar\beta_1_hat$ (`r sim_mean`) is close to $\beta_1$ from the model, difference is only `r beta_1 - beta_1_hat`
+The mean of $\hat\beta_1$ obtained from the simulation is (**`r format(sim_mean, digits = 5, nsmall = 4)`**, which is close to $\beta_1$ from the fitted model, difference is only **`r format(beta_1 - beta_1_hat, digits = 5, nsmall = 4)`**
 
 **(f)** Plot a histogram of `beta_hat_1`. Comment on the shape of this histogram.
 
@@ -339,7 +339,7 @@ sim_hist <- function(beta_hat_1) {
 sim_hist(beta_hat_1)
 ```
 
-The shape corresponds to a Normal Distribution, its mean seems to be located around `-3.0`. That is, the $\beta_1$ value for our proposed model parameters.
+The shape corresponds to a `Normal Distribution`, its mean seems to be located around `-3.0`. That is, the $\beta_1$ value for our proposed model parameters.
 
 ***
 
@@ -388,7 +388,7 @@ beta_hat_1 <- loop_simulation(x, num_simulations = 2500, beta_0 = 3, beta_1 = 0,
 sim_hist(beta_hat_1)
 ```
 
-In this case since $\beta_1=0$ in our model, most of the estimated values are shown in the histogram very close to `0`. The mean is close to 0 as well: `r mean(beta_hat_1)`
+In this case since $\beta_1=0$ in our model, most of the estimated values are shown in the histogram very close to `0`. The mean is close to 0 as well: **`r mean(beta_hat_1)`**
 
 **(c)** Import the data in [`skeptic.csv`](skeptic.csv) and fit a SLR model. The variable names in `skeptic.csv` follow the same convention as those returned by `sim_slr()`. Extract the fitted coefficient for $\beta_1$.
 
@@ -423,29 +423,20 @@ proportion * 2
 **(f)** Based on your histogram and part **(e)**, do you think the [`skeptic.csv`](skeptic.csv) data could have been generated by the model given above? Briefly explain.
 
 ```{r}
-summary(skeptic_model)
-
-(beta_hat_1_mean <- mean(beta_hat_1))
-(beta_hat_1_sd <- sd(beta_hat_1))
-beta_hat_1_sd * 2
-
-dnorm(skeptic_beta_hat_1, mean = beta_hat_1_mean, sd = beta_hat_1_sd)
-pnorm(skeptic_beta_hat_1, mean = beta_hat_1_mean, sd = beta_hat_1_sd)
-# x = mean - (k * sd)
-# mean - x = k * sd
-# k = (mean - x) / sd
-(k_sd_from_mean <- (beta_hat_1_mean - skeptic_beta_hat_1) / beta_hat_1_sd)
-```
-
-From the graph we can see $\hat\beta_1$ fitted for the skeptic data set is located `r k_sd_from_mean` Standard Variations from the mean. So the probability for the simulated model to fit a line where $\hat\beta_1$ is close to `r skeptic_beta_hat_1` is very low.
-
-We can calculate the probability of $\hat\beta_1$ to be `r skeptic_beta_hat_1` or less.
-
-```{r}
 beta_hat_1_mean <- mean(beta_hat_1)
 beta_hat_1_sd <- sd(beta_hat_1)
+k_sd_from_mean <- (beta_hat_1_mean - skeptic_beta_hat_1) / beta_hat_1_sd
+```
+
+From the graph we can see $\hat\beta_1$ fitted for the skeptic data set is located **`r k_sd_from_mean` Standard Variations from the mean**. So the probability for the simulated model to fit a line where $\hat\beta_1$ is close to **`r skeptic_beta_hat_1`** is very low.
+
+Additionally, we can calculate the probability of $\hat\beta_1$ to be `r skeptic_beta_hat_1` or less.
+
+```{r}
 pnorm(skeptic_beta_hat_1, mean = beta_hat_1_mean, sd = beta_hat_1_sd)
 ```
+
+This also matches the idea of having a low proportion of simulated Beta values that are less than $\hat\beta_1$ found for the skeptic data set.
 
 We can extend the idea and say that using the simulation model to fit a line that explains the skeptic data set has very low probability, then the model also has very low probability to produce such data set.
 
@@ -511,6 +502,6 @@ kable(results,
 
 **(b)** Based on the results, which of the three predictors used is most helpful for predicting ozone readings? Briefly explain.
 
-The temperature explains `r results[3, ]$r_squared * 100`% of the variability in the Ozone measures. It also has the lowest "Root Mean Square Error". Given that, we can conclude that the Temperature is the most useful.
+The temperature explains **`r format(round(results[3, ]$r_squared * 100, 2), nsmall = 2)`%** of the variability in the Ozone measures. It also has the lowest "Root Mean Square Error". Given that, we can conclude that the Temperature is the most useful.
 
 ***
