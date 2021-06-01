@@ -180,7 +180,6 @@ pre code {
 </div>
 
 <hr />
-<pre class="r"><code>#options(digits=4)</code></pre>
 <div id="exercise-1-using-lm" class="section level2">
 <h2>Exercise 1 (Using <code>lm</code>)</h2>
 <p>For this exercise we will use the <code>cats</code> dataset from the <code>MASS</code> package. You should use <code>?cats</code> to learn about the background of this dataset.</p>
@@ -394,9 +393,11 @@ head(beta_hat_1)</code></pre>
 <pre><code>## [1] -2.588378 -2.225193 -3.122618 -2.882683 -3.012934 -2.837160</code></pre>
 <p><strong>(e)</strong> Report the mean and standard deviation of <code>beta_hat_1</code>. Do either of these look familiar?</p>
 <p><strong>Solution</strong></p>
-<pre class="r"><code>sim_mean &lt;- mean(beta_hat_1)
-sim_sd &lt;- sd(beta_hat_1)</code></pre>
-<p>The mean of <span class="math inline">\(\hat\beta_1\)</span> (-2.9979) is close to <span class="math inline">\(\beta_1\)</span> from the model, difference is only <strong>-0.018802</strong></p>
+<pre class="r"><code>(sim_mean &lt;- mean(beta_hat_1))</code></pre>
+<pre><code>## [1] -2.997906</code></pre>
+<pre class="r"><code>(sim_sd &lt;- sd(beta_hat_1))</code></pre>
+<pre><code>## [1] 0.2261928</code></pre>
+<p>The mean of <span class="math inline">\(\hat\beta_1\)</span> obtained from the simulation is (<strong>-2.9979</strong>, which is close to <span class="math inline">\(\beta_1\)</span> from the fitted model, difference is only <strong>-0.018802</strong></p>
 <p><strong>(f)</strong> Plot a histogram of <code>beta_hat_1</code>. Comment on the shape of this histogram.</p>
 <pre class="r"><code>sim_hist &lt;- function(beta_hat_1) {
   hist(beta_hat_1,
@@ -469,9 +470,6 @@ k_sd_from_mean &lt;- (beta_hat_1_mean - skeptic_beta_hat_1) / beta_hat_1_sd</cod
 <h2>Exercise 5 (Comparing Models)</h2>
 <p>For this exercise we will use the <code>Ozone</code> dataset from the <code>mlbench</code> package. You should use <code>?Ozone</code> to learn about the background of this dataset. You may need to install the <code>mlbench</code> package. If you do so, do not include code to install the package in your <code>R</code> Markdown document.</p>
 <p>For simplicity, we will perform some data cleaning before proceeding.</p>
-<pre class="r"><code>?Ozone</code></pre>
-<pre><code>## No documentation for &#39;Ozone&#39; in specified packages and libraries:
-## you could try &#39;??Ozone&#39;</code></pre>
 <pre class="r"><code>data(Ozone, package = &quot;mlbench&quot;)
 Ozone = Ozone[, c(4, 6, 7, 8)]
 colnames(Ozone) = c(&quot;ozone&quot;, &quot;wind&quot;, &quot;humidity&quot;, &quot;temp&quot;)

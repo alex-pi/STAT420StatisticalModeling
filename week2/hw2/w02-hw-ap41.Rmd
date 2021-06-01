@@ -13,9 +13,6 @@ editor_options:
 ---
 
 ***
-```{r}
-#options(digits=4)
-```
 
 ## Exercise 1 (Using `lm`)
 
@@ -80,8 +77,7 @@ Similarly, the min observed value in Y (**`r min_y_in_data`**) is smaller than t
 We can check the Coefficient of Determination for our model.
 
 ```{r}
-coeff_deter <- summary(cat_model)$r.squared
- 
+(coeff_deter <- summary(cat_model)$r.squared)
 ```
 
 **`r format(round(coeff_deter * 100, 2), nsmall = 2)`%** of the variance in the heart's weight is explained by the body weight. We can say that our model is somewhat giving good predictions but still **`r format(round((1 - coeff_deter) * 100, 2), nsmall = 2)`%** is noise (other unknown factors).
@@ -92,7 +88,7 @@ coeff_deter <- summary(cat_model)$r.squared
 **Solution:**
 
 ```{r}
-y_hat_15 <- predict(cat_model, newdata = data.frame(Bwt = 1.5))
+(y_hat_15 <- predict(cat_model, newdata = data.frame(Bwt = 1.5)))
 ```
 
 *Prediction:* **`r y_hat_15` g.**
@@ -185,7 +181,7 @@ all.equal(summary(cat_model)$sigma, s_e)
 all.equal(summary(cat_model)$sigma, s_d)
 ```
 
-In this case the model's $\sigma$ matches the `Least Squares` estimate.
+In this case the model's $\sigma$ matches the `Least Squares` estimate ($s_e$).
 
 ***
 
@@ -250,9 +246,9 @@ sim_model <- lm(response ~ predictor, data = sim_data)
 (beta_1_hat <- sim_model$coefficients[2])
 ```
 
-The estimated intercept, $\hat\beta_0$ is not as close as $\beta_0$, they differ by **`r beta_0 - beta_0_hat`**
+The estimated intercept, $\hat\beta_0$ is close to the $\beta_0$ used in the model, they differ by **`r beta_0 - beta_0_hat`**
 
-On the other hand, the estimated slope $\hat\beta_1$ is close to $\beta_1$ from the model, difference is only **`r beta_1 - beta_1_hat`**.
+Also, the estimated slope $\hat\beta_1$ is close to $\beta_1$ from the model, difference is only **`r beta_1 - beta_1_hat`**.
 
 **(c)** Plot the data you simulated in part **(a)**. Add the regression line from part **(b)** as well as the line for the true model. Hint: Keep all plotting commands in the same chunk.
 
@@ -449,7 +445,6 @@ For this exercise we will use the `Ozone` dataset from the `mlbench` package. Yo
 For simplicity, we will perform some data cleaning before proceeding.
 
 ```{r message=FALSE}
-?Ozone
 data(Ozone, package = "mlbench")
 Ozone = Ozone[, c(4, 6, 7, 8)]
 colnames(Ozone) = c("ozone", "wind", "humidity", "temp")
