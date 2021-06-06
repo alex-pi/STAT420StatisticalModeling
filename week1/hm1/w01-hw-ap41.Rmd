@@ -1,6 +1,6 @@
 ---
-title: "Week 1 - Homework"
-author: "STAT 420, Summer 2021, D. Unger"
+title: "Week 1 - Homework - STAT 420, Summer 2021"
+author: "Alejandro Pimentel (ap41)"
 date: ''
 output:
   html_document: 

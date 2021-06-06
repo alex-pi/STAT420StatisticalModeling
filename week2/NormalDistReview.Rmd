@@ -87,6 +87,7 @@ Probability of a person to have IQ > 130
 1 - pnorm(130, mean = 100, sd = 15)
 pnorm(130, mean = 100, sd = 15, lower.tail = FALSE)
 ```
+
 What IQ is needed to be in the top 5%?
 
 $$

@@ -1,6 +1,6 @@
 ---
-title: "Week 2 - Homework"
-author: "STAT 420, Summer 2021, D. Unger"
+title: "Week 2 - Homework - STAT 420, Summer 2021"
+author: "Alejandro Pimentel (ap41)"
 date: ''
 output:
   html_document: 
@@ -50,9 +50,9 @@ More graphically, is where our fitted line crosses the Y axis.
 (y_hat_31 <- predict(cat_model, newdata = data.frame(Bwt = 3.1)))
 ```
 
-*Prediction:* **`r y_hat_31` g.**
+*Prediction:* **`r round(y_hat_31, 4)` g.**
 
-The estimated mean weight of a heart is **`r y_hat_31`** grams for a cat with a body weight of **3.1** kgs
+The estimated mean weight of a heart is **`r round(y_hat_31)`** grams for a cat with a body weight of **3.1** kgs
 
 Also, **3.1** is a value in the predictors used to fit the model. That gives us a good degree of confidence.
 
@@ -60,7 +60,7 @@ Also, **3.1** is a value in the predictors used to fit the model. That gives us 
 3.1 %in% cats$Bwt
 ```
 
-Let's calculate the residuals for min and max Y (`Hwt`) in the data when x (`Bwt`) is **3.1**
+Let's calculate the residuals for min and max Y (`Hwt`) in the data when the predictor (`Bwt`) is **3.1**
 
 ```{r}
 (max_y_in_data <- max(cats[cats$Bwt == 3.1, ]$Hwt))
@@ -70,9 +70,9 @@ Let's calculate the residuals for min and max Y (`Hwt`) in the data when x (`Bwt
 (res_on_min <- min_y_in_data - y_hat_31)
 ```
 
-For the max value in Y (**`r max_y_in_data`**) we get a residual of **`r res_on_max`**. This means that the observed heart weight is more than the estimated.
+For the max value in Y (**`r max_y_in_data`**) we get a residual of **`r round(res_on_max, 4)` grams**. This means that the observed heart weight is more than the estimated.
 
-Similarly, the min observed value in Y (**`r min_y_in_data`**) is smaller than the estimated since the residual is negative, **`r res_on_min`**
+Similarly, the min observed value in Y (**`r min_y_in_data`**) is smaller than the estimated since the residual is negative, **`r round(res_on_min, 4)` grams**
 
 We can check the Coefficient of Determination for our model.
 
@@ -91,12 +91,12 @@ We can check the Coefficient of Determination for our model.
 (y_hat_15 <- predict(cat_model, newdata = data.frame(Bwt = 1.5)))
 ```
 
-*Prediction:* **`r y_hat_15` g.**
+*Prediction:* **`r round(y_hat_15, 4)` g.**
 
 In this case we are extrapolating since **1.5** is out of range of the observed data. Giving that, we should be less confident about this prediction.
 
 ```{r}
-1.5 < max(cats$Bwt) & 1.5 > min(cats$Bwt)
+1.5 <= max(cats$Bwt) & 1.5 >= min(cats$Bwt)
 ```
 
 **(e)** Create a scatterplot of the data and add the fitted regression line. Make sure your plot is well labeled and is somewhat visually appealing.
@@ -160,7 +160,7 @@ y <- cats$Hwt
 (s_e <- get_sd_est(fitted_vals = y_hat, actual_vals = y))
 ```
 
-The Residual Standard Error indicates that our estimated mean for the hearts weight is wrong in "average" by **`r s_e` grams**.
+The Residual Standard Error indicates that our estimated mean for the hearts weight is wrong in "average" by **`r round(s_e, 4)` grams**.
 
 **(c)** Run the function `get_sd_est` on the residuals from the model in Exercise 1, with `mle` set to `TRUE`. Explain the resulting estimate in the context of the model. Note that we are trying to estimate the same parameter as in part **(b)**.
 
@@ -170,7 +170,7 @@ The Residual Standard Error indicates that our estimated mean for the hearts wei
 (s_d <- get_sd_est(fitted_vals = y_hat, actual_vals = y, mle = TRUE))
 ```
 
-Using `mle` we get a similar value of **`r s_d`**. Our mean estimates will be off by **`r s_d` grams**. For `mle` we use **`r nrow(cats)`** degrees of freedom and is considered `biased`.
+Using `mle` we get a similar value of **`r round(s_d, 4)`**. Our mean estimates will be off by **`r round(s_d, 4)` grams**. For `mle` we use **`r nrow(cats)`** degrees of freedom and is considered `biased`.
 
 **(d)** To check your work, output `summary(cat_model)$sigma`. It should match at least one of **(b)** or **(c)**.
 
@@ -319,15 +319,15 @@ head(beta_hat_1)
 (sim_sd <- sd(beta_hat_1))
 ```
 
-The mean of $\hat\beta_1$ obtained from the simulation is (**`r format(sim_mean, digits = 5, nsmall = 4)`**, which is close to $\beta_1$ from the fitted model, difference is only **`r format(beta_1 - beta_1_hat, digits = 5, nsmall = 4)`**
+The mean of $\hat\beta_1$ obtained from the simulation is (**`r format(sim_mean, digits = 5, nsmall = 4)`)**, which is close to $\beta_1$ from the fitted model, difference is only **`r format(beta_1 - beta_1_hat, digits = 5, nsmall = 4)`**
 
 **(f)** Plot a histogram of `beta_hat_1`. Comment on the shape of this histogram.
 
 ```{r}
 sim_hist <- function(beta_hat_1) {
   hist(beta_hat_1,
-       xlab   = "Estimated Beta_1 values",
-       main   = "Histogram Beta_1 values from Simulations",
+       xlab   = "Estimated " ~ beta[1] ~ " values",
+       main   = "Histogram of " ~ beta[1] ~ " values from Simulations",
        col  = "deepskyblue3",
        border = "gray80"
        )
@@ -394,7 +394,7 @@ In this case since $\beta_1=0$ in our model, most of the estimated values are sh
 library(readr)
 skeptic <- read_csv("skeptic.csv")
 skeptic_model <- lm(response ~ predictor, skeptic)
-skeptic_beta_hat_1 <- skeptic_model$coefficients[2]
+(skeptic_beta_hat_1 <- skeptic_model$coefficients[2])
 ```
 
 **(d)** Re-plot the histogram from **(b)**. Now add a vertical red line at the value of $\hat{\beta_1}$ in part **(c)**. To do so, you'll need to use `abline(v = c, col = "red")` where `c` is your value.
@@ -424,12 +424,12 @@ beta_hat_1_sd <- sd(beta_hat_1)
 k_sd_from_mean <- (beta_hat_1_mean - skeptic_beta_hat_1) / beta_hat_1_sd
 ```
 
-From the graph we can see $\hat\beta_1$ fitted for the skeptic data set is located **`r k_sd_from_mean` Standard Variations from the mean**. So the probability for the simulated model to fit a line where $\hat\beta_1$ is close to **`r skeptic_beta_hat_1`** is very low.
+From the graph we can see $\hat\beta_1$ fitted for the skeptic data set is located **`r round(k_sd_from_mean, 4)` Standard Deviations from the mean**. So the probability for the simulated model to fit a line where $\hat\beta_1$ is close to **`r round(skeptic_beta_hat_1, 4)`** is very low.
 
-Additionally, we can calculate the probability of $\hat\beta_1$ to be `r skeptic_beta_hat_1` or less.
+Additionally, we can calculate the probability for $\hat\beta_1$ to be `r round(skeptic_beta_hat_1, 4)` or less.
 
 ```{r}
-pnorm(skeptic_beta_hat_1, mean = beta_hat_1_mean, sd = beta_hat_1_sd)
+pnorm(unname(skeptic_beta_hat_1), mean = beta_hat_1_mean, sd = beta_hat_1_sd)
 ```
 
 This also matches the idea of having a low proportion of simulated Beta values that are less than $\hat\beta_1$ found for the skeptic data set.
@@ -491,7 +491,7 @@ results <- data.frame(
 
 kable(results, 
       col.names = c("R^2", "RMSE"),
-      caption = "Comparing Ozone model with 3 different predictors")
+      caption = "Comparing Ozone models with 3 different predictors")
 ```
 
 

@@ -110,6 +110,14 @@ y_hat <- predict(f_fit, newdata = faithful)
 RSS <- sum((y - y_hat) ^ 2)
 ```
 
+I lost track of the Residual standard error. It is calculated
+as follows:
+```{r}
+sqrt(sum((faithful$eruptions - f_fit$fitted.values)^2) / (nrow(faithful) - 2))
+names(summary(f_fit))
+summary(f_fit)$sigma
+```
+
 # Question 10
 
 What proportion of the variation in eruption duration is explained by the linear relationship with waiting time?

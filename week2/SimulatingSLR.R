@@ -70,11 +70,11 @@ legend("topright", c("Estimate", "Truth"),
 
 # The parameters we estimate follow its own distribution based on
 # the parameters we use for the model (the real ones)
-
+#set.seed(1)
 sim_data <- sim_slr(x = x_vals, beta_0 = 5, beta_1 = -2, sigma = 3)
 sim_fit <- lm(response ~ predictor, data = sim_data)
 
-sim_fit <- lm(response ~ predictor, data = sim_data)
+i#sim_fit <- lm(response ~ predictor, data = sim_data)
 sim_fit$coefficients
 
 plot(response ~ predictor, 
@@ -87,3 +87,4 @@ legend("topright", c("Estimate", "Truth"),
        lty = c(1, 2),
        lwd = 3,
        col = c("darkorange", "dodgerblue"))
+
