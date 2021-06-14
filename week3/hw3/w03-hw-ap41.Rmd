@@ -34,6 +34,13 @@ Store the results in a variable called `cat_model`. Use a $t$ test to test the s
 
 When reporting these, you should explicitly state them in your document, not assume that a reader will find and interpret them from a large block of `R` output.
 
+```{r}
+fr <- function(nums, digits = 5) {
+  format(round(nums, digits), nsmall = digits)
+}
+```
+
+
 **Solution**
 
 ```{r}
@@ -42,7 +49,7 @@ cat_model <- lm(Hwt ~ Bwt, data = cats)
 
 ```
 
-Since we are trying to prove/disprove a linear relationship between the predictor `(Bwt)` and the response `(Hwt)`, the null and alternative hypothesis for $\beta_1$ is:
+Since we are trying to check for a linear relationship between the predictor `(Bwt)` and the response `(Hwt)`, the null and alternative hypothesis for $\beta_1$ is:
 
 $H_0: \beta_1 = 0$ vs $H_1: \beta_1 \neq 0$
 
@@ -64,9 +71,6 @@ get_coef_data <- function(coef) {
     "p value" = c(formatC(coef[1, 4],format="e"),
                     formatC(coef[2, 4],format="e"))  
   )
-  #kable(table_data, 
-  #    col.names = c("Estimate ","t value","p value"),
-  #    caption = "Coefficients for Linear Model on MASS::cats dataset.")
 }
 
 gen_kable <- function(table_data, row_names = TRUE, caption = "") {
@@ -74,8 +78,8 @@ gen_kable <- function(table_data, row_names = TRUE, caption = "") {
         caption = caption) %>%
     kable_styling(bootstrap_options = c("striped", "hover"),
                   full_width = F,
-                  font_size = 12,
-                  position = "left")
+                  font_size = 14,
+                  position = "center")
 }
 tdata <- get_coef_data(coef_cat)
 gen_kable(tdata, caption = "Coefficients for Linear Model on MASS::cats dataset.")
@@ -112,7 +116,7 @@ On this basis we can also reject $H_0: \beta_1 = 0$, since 0 is not in the inter
 (beta_0_interval <- confint(cat_model, parm = "(Intercept)", level = 0.9))
 ```
 
-With `90%` of confidence we say that, for a cat with `Body Weight` of `0 Kg` the mean of the `Heart Weight` is located in the interval: $\left(-1.502834, 0.7895096\right)$. Note that in real life the only `Heart Weight` value that makes sense would be 0, which in this case is in the `Confidence Interval`.
+With `90%` of confidence we say that, for a `Body Weight` of `0 Kg` the mean of the `Heart Weight` is located in the interval: $\left(-1.502834, 0.7895096\right)$. Note that in reality, negative values of `Heart Weight` do not make sense. Even more, `0 grams` is the only response that seems sensical, but a model would not necessarily reflect that.
 
 **(d)** Use a 90% confidence interval to estimate the mean heart weight for body weights of 2.1 and 2.8 kilograms. Which of the two intervals is wider? Why?
 
@@ -133,7 +137,7 @@ len_interval_28 <- conf_interval[2, 3] - conf_interval[2, 2]
 
 *$\bar{x}$* : `r mean_cats[1]`
 
-The interval for 2.1 Kg is wider in this case because 2.1 is farther from the mean of `x` (`Bwt`). We are less confident in areas with fewer data points (i.e. away from the mean), to account for that, the interval has to be wider.
+The **interval for `2.1 Kg` is wider** in this case because `2.1` is farther from $\bar{x}$ (`Bwt`). We are less confident in areas with fewer data points (i.e. away from the mean), to account for that, the interval has to be wider.
 
 **(e)** Use a 90% prediction interval to predict the heart weight for body weights of 2.8 and 4.2 kilograms.
 
@@ -155,9 +159,6 @@ pred_table <- data.frame(
                   pred_interval[2, 3])   
 )
 
-#kable(pred_table, 
-#      col.names = c("Body Weight (kg)","Predicted Hwt (g)","Lower Bound","Upper Bound"),
-#      caption = "90% Prediction Intervals")
 
 gen_kable(pred_table, caption = "90% Prediction Intervals")
 ```
@@ -175,6 +176,8 @@ conf_interval_seq <- predict(cat_model, newdata = data.frame(Bwt = bwt_seq),
 
 pred_interval_seq <- predict(cat_model, newdata = data.frame(Bwt = bwt_seq),
         interval = c("prediction"), level = 0.95)
+
+#dev.new(width=400, height=300, unit="pixels")
 
 plot(Hwt ~ Bwt, data = cats,
      xlab = "Body Weight (kg)",
@@ -275,7 +278,7 @@ When reporting these, you should explicitly state them in your document, not ass
 
 **Solution**
 
-Since we are trying to prove/disprove a linear relationship between the predictor `(wind)` and the response `(ozone)`, the null and alternative hypothesis for $\beta_1$ is:
+Since we are trying to check for a linear relationship between the predictor `(wind)` and the response `(ozone)`, the null and alternative hypothesis for $\beta_1$ is:
 
 $H_0: \beta_1 = 0$ vs $H_1: \beta_1 \neq 0$
 
@@ -314,7 +317,7 @@ When reporting these, you should explicitly state them in your document, not ass
 
 **Solution**
 
-Since we are trying to prove/disprove a linear relationship between the predictor `(temp)` and the response `(ozone)`, the null and alternative hypothesis for $\beta_1$ is:
+Since we are trying to check for a linear relationship between the predictor `(temp)` and the response `(ozone)`, the null and alternative hypothesis for $\beta_1$ is:
 
 $H_0: \beta_1 = 0$ vs $H_1: \beta_1 \neq 0$
 
@@ -417,10 +420,10 @@ var_beta_0_hat <- sigma ^ 2 * (1/n + mean(x) ^ 2 / Sxx)
 
 data_Q3b <- data.frame(
   row.names = c("Expected (true mean)", "Mean from simulation", "Expected SD", "SD from simulation"),
-  "beta_0_hat" = c(beta_0, mean(beta_hats$beta_0_hats), 
-                   sqrt(var_beta_0_hat), sd(beta_hats$beta_0_hats)),
-  "beta_1_hat" = c(beta_1, mean(beta_hats$beta_1_hats), 
-                   sqrt(var_beta_1_hat), sd(beta_hats$beta_1_hats))
+  "beta_0_hat" = c(fr(beta_0, 2), fr(mean(beta_hats$beta_0_hats)), 
+                   fr(sqrt(var_beta_0_hat)), fr(sd(beta_hats$beta_0_hats))),
+  "beta_1_hat" = c(fr(beta_1, 2), fr(mean(beta_hats$beta_1_hats)), 
+                   fr(sqrt(var_beta_1_hat)), fr(sd(beta_hats$beta_1_hats)))
 )
 
 gen_kable(data_Q3b, caption = "True values vs Simulation values")
@@ -513,7 +516,6 @@ sim_stats <- loop_simulation(x, beta_0, beta_1, num_simulations = 2500, sigma = 
 **Solution**
 
 ```{r}
-Sxx <- sum((x - mean(x)) ^ 2)
 crit <- qt(0.025, df = n - 2, lower.tail = FALSE)
 margin <- crit * sim_stats$beta_1_hats_se
 lower_95 <- sim_stats$beta_1_hats - margin

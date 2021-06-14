@@ -1,0 +1,138 @@
+---
+title: "mlr_intervals"
+author: "AP"
+date: "6/9/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Intervals and Test for MLR
+
+## Importing Data
+
+```{r}
+autompg <- read.table(
+  "http://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data",
+  stringsAsFactors = FALSE
+)
+#give headers
+colnames(autompg) <- c("mpg","cyl","disp","hp","wt","acc","year","origin","name")
+# remove missing data marked as ?
+autompg <- subset(autompg, autompg$hp != "?")
+# remove a record that has issues
+autompg <- subset(autompg, autompg$name != "plymouth reliant")
+# give the dataset row names, based on the engine, year and name
+rownames(autompg) <- paste(autompg$cyl, "cylinder", autompg$year, autompg$name)
+# remove the name and origin columns
+autompg <- subset(autompg, select = c("mpg","cyl","disp","hp","wt","acc","year"))
+# change horsepower to numeric
+autompg$hp <- as.numeric(autompg$hp)
+
+str(autompg)
+```
+
+## Fitting MLR
+
+$$
+Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \epsilon_i
+$$
+
+```{r}
+mpg_model <- lm(mpg ~ wt + year, data = autompg)
+mpg_model$coefficients
+summary(mpg_model)
+```
+
+# Coefficients
+
+Now the mode contains the same coef as in did for SLR but know
+with one more row since we fit for wt and yeat.
+
+The coefficients for wt represent values when **the other predictors are also
+in the model**
+
+```{r}
+summary(mpg_model)$coef
+```
+
+Here for instance is the p value when we are testing for year
+
+```{r}
+summary(mpg_model)$coef["year", "Pr(>|t|)"]
+```
+
+# Confidence Intervals
+
+We can get a Confidence Interval in the same way since functions are `vectorized`
+
+```{r}
+confint(mpg_model, level = 0.99)
+```
+
+From the CI above and the p value for `year`, we would reject $H_0: \beta_2 = 0$
+
+# CI for new observations
+
+```{r}
+(new_cars <- data.frame(wt = c(3500, 5000), year = c(76, 81)))
+```
+
+```{r}
+predict(mpg_model, newdata = new_cars,
+        interval = "confidence", level = 0.99)
+```
+
+# PI for new observations
+
+```{r}
+predict(mpg_model, newdata = new_cars,
+        interval = "prediction", level = 0.99)
+```
+
+
+# Hidden extrapolations
+
+Individually, seems like the new values are in the rages of their respective predictors.
+
+```{r}
+library("dplyr")
+between(c(3500, 5000), min(autompg$wt), max(autompg$wt))
+between(c(76, 81), min(autompg$year), max(autompg$year))
+```
+
+But combined, one of them is an outlier:
+
+The data used to fit the model does not have cases similar to ~5000 lbs and 1980s
+
+```{r}
+plot(year ~ wt, data = autompg, pch = 20, col = "dodgerblue", cex = 1.5)
+points(new_cars, col = "darkorange", cex = 2.5, pch = "X")
+```
+
+
+# Critical values
+
+```{r}
+confint(mpg_model, level = 0.99, param = "wt")
+summary(mpg_model)$coef
+```
+
+```{r}
+beta_1_hat <- summary(mpg_model)$coef["wt", "Estimate"]
+es_err_wt <- summary(mpg_model)$coef["wt", "Std. Error"]
+
+# Get the degrees of freedom in 2 ways
+nrow(autompg) - length(mpg_model$coef)
+df <- summary(mpg_model)$df[2]
+
+abs(qt((1 - 0.99) / 2, df = df))
+(crit <- qt((1 - 0.99) / 2, df = df, lower.tail = FALSE))
+```
+
+Now we can calculate margins for `wt`
+
+```{r}
+c(beta_1_hat - crit * es_err_wt, beta_1_hat + crit * es_err_wt)
+```
+

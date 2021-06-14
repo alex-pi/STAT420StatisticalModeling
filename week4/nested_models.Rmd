@@ -1,0 +1,216 @@
+---
+title: "nested_models"
+author: "AP"
+date: "6/9/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Nested Models
+
+## Importing Data
+
+```{r}
+autompg <- read.table(
+  "http://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data",
+  stringsAsFactors = FALSE
+)
+#give headers
+colnames(autompg) <- c("mpg","cyl","disp","hp","wt","acc","year","origin","name")
+# remove missing data marked as ?
+autompg <- subset(autompg, autompg$hp != "?")
+# remove a record that has issues
+autompg <- subset(autompg, autompg$name != "plymouth reliant")
+# give the dataset row names, based on the engine, year and name
+rownames(autompg) <- paste(autompg$cyl, "cylinder", autompg$year, autompg$name)
+# remove the name and origin columns
+autompg <- subset(autompg, select = c("mpg","cyl","disp","hp","wt","acc","year"))
+# change horsepower to numeric
+autompg$hp <- as.numeric(autompg$hp)
+
+str(autompg)
+```
+
+# Significance of Regression
+
+The null model has both $\hat\beta_1$ and $\hat\beta_2$ as `0`
+
+```{r}
+null_mpg_model <- lm(mpg ~ 1, data = autompg)
+full_mpg_model <- lm(mpg ~ wt + year, data = autompg)
+(nf_anova <- anova(null_mpg_model, full_mpg_model))
+```
+
+RSS for the null model is just the Sum Of Squared Residuals of the response.
+
+This is the SST because uses the residual between y and its mean.
+
+```{r}
+nf_anova[1, "RSS"]
+(sst <- sum((autompg$mpg - mean(autompg$mpg)) ^ 2))
+
+```
+
+Then SSReg is a portion of SST
+
+```{r}
+nf_anova[2, "Sum of Sq"]
+(ssreg <- sum((full_mpg_model$fitted.values - mean(autompg$mpg)) ^ 2))
+```
+
+The difference between those 2 is the SSE
+
+```{r}
+nf_anova[1, "RSS"] - nf_anova[2, "Sum of Sq"]
+sum((autompg$mpg - full_mpg_model$fitted.values) ^ 2)
+```
+
+Note that the `ful_model` and `anova` have the same, p value, F statistic and degrees of freedom.
+
+Also from the model we can see small p values for both `wt` and `year`, so it seems together they turned out to be very significant. **But that doesn't mean they are individually significant.**
+
+```{r}
+summary(full_mpg_model)
+nf_anova
+```
+
+
+If we check R^2 we can tell how well the model is explaining the data.
+
+$R^2$
+
+```{r}
+summary(full_mpg_model)$r.squared
+ssreg / sst
+```
+
+# Nested Models
+
+```{r}
+null_mpg_model <- lm(mpg ~ wt + year, data = autompg)
+full_mpg_model <- lm(mpg ~ ., data = autompg)
+(nf_anova <- anova(null_mpg_model, full_mpg_model))
+```
+
+In this case the full model has a large `p value` due to a small `F statistic` value. The $H_0$ is defined as:
+
+$$
+H_0: \beta_{cyl} = \beta_{disp} = \beta_{hp} = \beta_{acc} = 0
+$$
+
+With a reasonable $\alpha$ we will `FTR the null Hypothesis` meaning that **those predictors are not significant when `wt` and `year` are in the model.**
+
+
+# Calculating p values manually
+
+We use the pf function and pass the F statistic
+
+```{r}
+nf_anova[2, "F"]
+# p - q degrees of freedom From the diff of sum of squares 
+(p_q <- nf_anova[2, "Df"])
+(n_p <- summary(full_mpg_model)$df[2])
+
+pf(nf_anova[2, "F"], df1 = p_q, df2 = n_p, lower.tail = FALSE)
+nf_anova[2, "Pr(>F)"]
+```
+
+
+# Calculating F statistic manually
+
+Here we decompose the error made by the `null model`, not the variance of `y`
+
+```{r}
+(diff_sum_sq <- sum((full_mpg_model$fitted.values - null_mpg_model$fitted.values) ^ 2))
+nf_anova[2, "Sum of Sq"]
+nf_anova[1, "RSS"] - nf_anova[2, "RSS"] 
+
+
+(full_sum_sq <- sum((autompg$mpg - full_mpg_model$fitted.values) ^ 2))
+nf_anova[2, "RSS"]
+nf_anova[1, "RSS"] - nf_anova[2, "Sum of Sq"]
+
+(F_sta <- (diff_sum_sq / p_q) / (full_sum_sq / n_p))
+nf_anova[2, "F"]
+```
+
+
+# t vs F
+
+```{r}
+null_mpg_model <- lm(mpg ~ wt + year, data = autompg)
+full_mpg_model <- lm(mpg ~ wt + year + acc, data = autompg)
+(nf_anova <- anova(null_mpg_model, full_mpg_model))
+```
+
+Note that the `t value` ^ 2 for `acc` in the full model is the `F statistic` in the anova table
+
+```{r}
+summary(full_mpg_model)$coef
+summary(full_mpg_model)$coef["acc", 3] ^ 2
+nf_anova[2, "F"]
+
+```
+
+If we do this manually note that p - q becomes 1. The null model has only one less predictor than the full model has.
+
+```{r}
+(p_q <- nf_anova[2, "Df"])
+(n_p <- summary(full_mpg_model)$df[2])
+(diff_sum_sq <- sum((full_mpg_model$fitted.values - null_mpg_model$fitted.values) ^ 2))
+(full_sum_sq <- sum((autompg$mpg - full_mpg_model$fitted.values) ^ 2))
+(F_sta <- (diff_sum_sq / p_q) / (full_sum_sq / n_p))
+```
+
+```{r}
+(beta_3_hat <- full_mpg_model$coefficients[4])
+Sxx <- sum((autompg$acc - mean(autompg$acc)) ^ 2)
+
+# Residual stantard error
+(s_e <- summary(full_mpg_model)$sigma)
+sqrt(sum((autompg$mpg - full_mpg_model$fitted.values)^2) / n_p)
+
+# How do I calculate the Std. Error correctly? are Sxx and s_e correct?
+(s_err <- summary(full_mpg_model)$coef["acc", "Std. Error"])
+(manual_beta_3_hat_t <- (beta_3_hat - 0) / (s_e / sqrt(Sxx)))
+
+(manual_beta_3_hat_t <- (beta_3_hat - 0) / s_err)
+summary(full_mpg_model)$coef["acc", "t value"]
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

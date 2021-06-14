@@ -1,0 +1,247 @@
+---
+title: "quiz-week4"
+author: "AP"
+date: "6/10/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Question 1
+
+Consider testing for significance of regression in a multiple linear regression model with 9 predictors and 30 observations. If the value of the $F$ test statistic is 2.4, what is the p-value of this test?
+
+```{r}
+1 - pf(2.4, df1 = 10 - 1, df2 = 30 - 10)
+```
+
+# Question 2
+
+What is the p-value for testing $H_0: \beta_1 = 0 \ \text{vs} \ H_1: \beta_1 \neq 0$
+in a multiple linear regression model with 5 predictors and 20 observations if the value of the t test statistic is -1.3? 
+
+```{r}
+2 * pt(-abs(-1.3), df = 20 - 6)
+
+1 - pf((-1.3)^2, df1 = 6 - 5, df2 = 20 - 6)
+```
+
+# Question 3
+
+Consider the true model
+
+$$Y = 3 + 2 x_1  + 0.5 x_2  + 5 x_3 + \epsilon$$
+
+where 
+
+$$ϵ∼N(0,σ^2 = 9) $$
+
+What is $\text{SD}[\hat{\beta}_2]$ given the values of predictors above?
+
+
+$$\text{Var}[\hat{\beta}] = \sigma^2 \left(  X^\top X  \right)^{-1}$$
+
+$$\text{Var}[\hat{\beta}_j] = \sigma^2 C_{jj}$$
+
+```{r}
+set.seed(42)
+x_values = data.frame(
+  x1 = runif(15),
+  x2 = runif(15),
+  x3 = runif(15)
+)
+
+X <- cbind(1, x_values$x1, x_values$x2, x_values$x3)
+C <- solve(t(X) %*% X)
+
+sqrt(9 * C[3, 3])
+
+```
+
+# Question 4
+
+For Questions 4-11, use the swiss dataset, which is built into R.
+
+Fit a multiple linear regression model with Fertility as the response and the remaining variables as predictors. You should use `?swiss` to learn about the background of this dataset.
+
+Use your fitted model to make a prediction for a Swiss province in 1888 with:
+
+- 54% of males involved in agriculture as occupation
+- 23% of draftees receiving highest mark on army examination
+- 13% of draftees obtaining education beyond primary school
+- 60% of the population identifying as Catholic
+- 24% of live births that live less than a year
+
+```{r}
+#?swiss
+full_model <- lm(Fertility ~ . , data = swiss)
+
+new_fert <- data.frame(
+  Agriculture = 54,
+  Examination = 23,
+  Education = 13,
+  Catholic = 60,
+  Infant.Mortality = 24
+)
+predict(full_model, newdata = new_fert)
+
+bh <- full_model$coef
+bh[1] + bh[2]*54 + bh[3]*23 + bh[4]*13 + bh[5]*60 + bh[6]*24
+```
+
+
+# Question 5
+
+Create a 99% confidence interval for the coefficient for Catholic. Report the upper bound of this interval.
+
+```{r}
+confint(full_model, level = 0.99, parm = "Catholic")[2]
+```
+
+# Question 6
+
+Calculate the p-value of the test 
+
+$$H_0: \beta_{\text{Examination}} = 0 \ \text{vs} \ H_1: \beta_{\text{Examination}} \neq 0$$
+ 
+```{r}
+summary(full_model)$coef["Examination", "Pr(>|t|)"]
+```
+
+# Question 7
+
+Create a 95% confidence interval for the average Fertility for a Swiss province in 1888 with:
+
+- 40% of males involved in agriculture as occupation
+- 28% of draftees receiving highest mark on army examination
+- 10% of draftees obtaining education beyond primary school
+- 42% of the population identifying as Catholic
+- 27% of live births that live less than a year
+
+Report the lower bound of this interval.
+
+```{r}
+new_fert <- data.frame(
+  Agriculture = 40,
+  Examination = 28,
+  Education = 10,
+  Catholic = 42,
+  Infant.Mortality = 27
+)
+predict(full_model, newdata = new_fert,
+        interval = "confidence", level = 0.95)[1, "lwr"]
+```
+
+
+# Question 8
+
+Create a 95% prediction interval for the average Fertility for a Swiss province in 1888 with:
+
+- 40% of males involved in agriculture as occupation
+- 28% of draftees receiving highest mark on army examination
+- 10% of draftees obtaining education beyond primary school
+- 42% of the population identifying as Catholic
+- 27% of live births that live less than a year
+
+Report the lower bound of this interval.
+
+```{r}
+new_fert <- data.frame(
+  Agriculture = 40,
+  Examination = 28,
+  Education = 10,
+  Catholic = 42,
+  Infant.Mortality = 27
+)
+predict(full_model, newdata = new_fert,
+        interval = "prediction", level = 0.95)[1, "lwr"]
+```
+
+# Question 9
+
+Report the value of the $F$ statistic for the significance of regression test.
+
+```{r}
+f_val <- summary(full_model)$fstatistic["value"]
+```
+
+# Question 10
+
+Carry out the significance of regression test using $\alpha = 0.01$. What decision do you make?
+
+```{r}
+1 - pf(f_val, df1 = 6 - 1, df2 = nrow(swiss) - 6)
+p_val <- pf(f_val, df1 = 6 - 1, df2 = nrow(swiss) - 6, lower.tail = FALSE)
+
+# At least one predictor is explaining 70% of the variance
+summary(full_model)$r.squared
+
+stat_decide <- function(p_value, alpha = 0.01) {
+  ifelse(p_value < alpha, "Reject the Null Hypothesis", "FTR the Null Hypothesis")
+}
+
+stat_decide(p_val, alpha = 0.01)
+```
+
+
+# Question 11
+
+Consider a model that only uses the predictors Education, Catholic, and Infant.Mortality. Use an FF test to compare this with the model that uses all predictors. Report the p-value of this test.
+
+```{r}
+full_model <- lm(Fertility ~ . , data = swiss)
+null_model <- lm(Fertility ~ Education + Catholic + Infant.Mortality, data = swiss)
+
+an <- anova(null_model, full_model)
+
+an[2, "Pr(>F)"]
+```
+
+
+# Question 13
+
+```{r}
+full_model <- lm(Employed ~ GNP + Population, data = longley)
+null_model1 <- lm(Employed ~ GNP, data = longley)
+null_model2 <- lm(Employed ~ Population, data = longley)
+
+anova(null_model1, full_model)
+anova(null_model2, full_model)
+full_model$coef
+```
+
+
+# Question 14
+
+Suppose you have an SLR model for predicting IQ from height. The estimated coefficient for height is positive. Now, we add a predictor for age to create an MLR model. After fitting this new model, the estimated coefficient for height must be:
+
+```{r}
+model1 <- lm(Employed ~ GNP, data = longley)
+model2 <- lm(Employed ~ GNP + Population, data = longley)
+
+model1$coef
+model2$coef
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

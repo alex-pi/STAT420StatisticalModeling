@@ -1,0 +1,156 @@
+---
+title: "MLR"
+author: "AP"
+date: "6/8/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Multiple Linear Regression
+
+## Importing Data
+
+```{r}
+autompg <- read.table(
+  "http://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data",
+  stringsAsFactors = FALSE
+)
+#give headers
+colnames(autompg) <- c("mpg","cyl","disp","hp","wt","acc","year","origin","name")
+# remove missing data marked as ?
+autompg <- subset(autompg, autompg$hp != "?")
+# remove a record that has issues
+autompg <- subset(autompg, autompg$name != "plymouth reliant")
+# give the dataset row names, based on the engine, year and name
+rownames(autompg) <- paste(autompg$cyl, "cylinder", autompg$year, autompg$name)
+# remove the name and origin columns
+autompg <- subset(autompg, select = c("mpg","cyl","disp","hp","wt","acc","year"))
+# change horsepower to numeric
+autompg$hp <- as.numeric(autompg$hp)
+
+str(autompg)
+```
+
+
+## Fitting MLR
+
+$$
+Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \epsilon_i
+$$
+
+```{r}
+mpg_model <- lm(mpg ~ wt + year, data = autompg)
+mpg_model$coefficients
+```
+
+$$
+\hat{y} = -14.637641945 + -0.006634876 x_1 + 0.761401955 x_2
+$$
+
+
+```{r}
+summary(mpg_model)
+```
+
+## Matrix Approach
+
+$$
+Y = X\beta + \epsilon
+$$
+
+```{r}
+n <- nrow(autompg)
+p <- length(mpg_model$coefficients)
+X <- cbind(1, autompg$wt, autompg$year)
+y <- autompg$mpg
+```
+
+$$
+\hat{\beta} = \left(X^\top X \right)^{-1} X^\top y
+$$
+
+```{r}
+(beta_hat <- solve(t(X) %*% X) %*% t(X) %*% y )
+```
+
+$$
+\hat{y} = X \hat{\beta}
+$$
+
+$$
+e = y - \hat{y}
+$$
+```{r}
+y_hat <- X %*% beta_hat
+e <- y - y_hat
+```
+
+$$
+s_e^2 = \frac{\sum_{i=1}^n (y_i - \hat{y}_i)^2}{n - p} = \frac{e^\top e}{n - p}
+$$
+
+```{r}
+sqrt(sum((y - y_hat)^2) / (n - p))
+```
+
+```{r}
+sqrt(t(e) %*% e / (n - p))
+```
+
+```{r}
+# Resialldual Standard Error
+summary(mpg_model)$sigma
+```
+
+## Multiple R^2
+
+```{r}
+mpg_model_small <- lm(mpg ~ year, data = autompg)
+
+mpg_model$coefficients
+mpg_model_small$coefficients
+```
+
+```{r}
+summary(mpg_model)$r.squared
+```
+
+The coefficient of determination for `mpg_model` is:
+
+$$
+R^2 = `r summary(mpg_model)$r.squared`
+$$
+
+```{r}
+summary(mpg_model_small)$r.squared
+```
+
+The coefficient of determination for `mpg_model_small` is:
+
+$$
+R^2 = `r summary(mpg_model_small)$r.squared`
+$$
+
+The $R^2$ show a significant drop, but we also should prefer smaller models, so which one is better?
+
+## Interpreting MLR
+
+```{r}
+lm(mpg ~ acc, data = autompg)$coefficients
+lm(mpg ~ acc + hp, data = autompg)$coefficients
+```
+
+So I'm going to run these and take a look at the estimated coefficients in front of acceleration. And, interestingly, the sign of them has changed. So previously when we had looked at, say, maybe this model here, just the magnitude of them has changed. But in this model, not only does the magnitude, but the sign, changes. And again, this is because there's a difference in interpreting a parameter in the Simple Linear Regression model, and a parameter in the Multiple Linear Regression model. So this is simply, okay, as acceleration increases, how does that affect ounce per gallon. And something to keep in mind here is that the acceleration variable is the time to 60 miles per hour in seconds. So a larger value is a slower car, a smaller value is a faster car. So, it sort of make sense that considering no other variables as you increase the time 60 miles per hour fuel efficiently goes up. So its a sort of think of slower cars often as sort of maybe more fuel efficient like spots car are generally not very fuel sufficient but they're faster. Now, in the Multiple Linear Regression model we have to considered that horsepower is in the model. So the interpretation of the parameter in front of acceleration is now for a particular horsepower. So consider a large horsepower, so there's sort of maybe two classes of vehicles that would fit into something that has high horse power which is maybe sports cars and maybe larger trucks or maybe really large cars. But so for a particular horse power, if the acceleration is small then we're probably dealing with something like a sports car that's fast. Where is if the acceleration is large that is a long time to 60 miles per hour we're probably dealing with a truck or a a very large car. And between those two, it makes sense that the lighter sports car probably, actually, has better fuel efficiency. So when we move from a low acceleration to a high acceleration, we actually see a decrease in fuel efficiency. So that's just something we have to be aware of when you're interpreting Multiple Linear Regression models. It's not as simple just consider the acceleration variable. You have to consider the acceleration variable with whatever other variables are in the model such as in this case horsepower. 
+
+
+
+
+
+
+
+
+
+
+
+

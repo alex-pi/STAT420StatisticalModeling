@@ -7,7 +7,7 @@ output: html_document
 
 # Question 1
 
-Consider a random variable XX that has a tt distribution with 55 degrees of freedom. Calculate $P[|X| > 2.1]$ .
+Consider a random variable X that has a t distribution with 5 degrees of freedom. Calculate $P[|X| > 2.1]$ .
 
 ```{r}
 pt(2.1, df = 5, lower.tail = FALSE) # Wrong

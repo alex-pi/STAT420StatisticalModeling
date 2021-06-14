@@ -22,7 +22,7 @@ Sxx <- sum((cars$speed - mean(cars$speed)) ^ 2)
 (s_e <- summary(stop_dist_model)$sigma)
 manual_beta_1_hat_t <- (beta_1_hat - 0) / (s_e / sqrt(Sxx))
 # Note that I needed to remove the name to compare these 2
-all.equal(unname(s_error_beta_1_hat), beta_1_hat_t)
+all.equal(unname(manual_beta_1_hat_t), beta_1_hat_t)
 
 
 # Verify p values
