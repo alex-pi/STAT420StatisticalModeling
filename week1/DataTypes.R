@@ -80,7 +80,7 @@ ex_list[1:2]
 # this also returns a list of one element
 # that one element is a vector of size 1
 ex_list[1]
-# dobule brackets will return the vector
+# double brackets will return the vector
 ex_list[[1]]
 # we can select the aliases to select elements of the list
 ex_list[c("a", "b")]

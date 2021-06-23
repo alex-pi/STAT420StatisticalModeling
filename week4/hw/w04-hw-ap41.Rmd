@@ -1,16 +1,23 @@
 ---
-title: "Week 4 - Homework"
-author: "STAT 420, Summer 2021, D. Unger"
+title: "Week 4 - Homework - STAT 420, Summer 2021"
+author: "Alejandro Pimentel (ap41)"
 date: ''
 output:
   html_document: 
     theme: readable
     toc: yes  
+    code_folding: show
   pdf_document: default
 urlcolor: cyan
 editor_options: 
   chunk_output_type: console
 ---
+
+```{css, echo=FALSE}
+p, li, td {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+```
 
 ***
 
@@ -61,9 +68,9 @@ When reporting these, you should explicitly state them in your document, not ass
 
 **Solution**
 
-Defining some utility functions first.
+**Defining some utility functions first. Click on the `Code` button to show it.**
 
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, class.source = 'fold-hide'}
 library(knitr)
 library(kableExtra)
 library(dplyr)
@@ -131,29 +138,36 @@ p_val_for_significance <- function(model) {
   unname(pf(f_val, df1 = df1, df2 = df2, lower.tail = FALSE))
 }
 
-fr <- function(nums, digits = 5) {
-  format(round(nums, digits), nsmall = digits)
+fr <- function(nums, digits = 5, notation_threshold = 0.000001) {
+  if_else(
+    abs(nums) < notation_threshold, 
+    formatC(nums, digits = digits, format = "e"), 
+    format(round(nums, digits), nsmall = digits)
+  )
 }
 
 ```
 
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(readr)
 nutrition <- read_csv("./nutrition-2018.csv")
 
 nutrition_model <- lm(Calories ~ Fat + Sugar + Sodium, data = nutrition)
 ```
 
-Since we are testing for the `Siginificance of the Regression` we want to know if **any** of the predictors explains the response. Given that the `Null Hypothesis` and `Alternative` are:
+Since we are testing for the `Siginificance of the Regression` we want to know if **any** of the predictors explains the response. Given that, the `Null Hypothesis` and `Alternative` are:
 
 $$H_0: \beta_1 = \beta_2 = \cdots = \beta_{p - 1} = 0$$
 $$H_1: \text{At least one of } \beta_j \neq 0, j = 1, 2, \cdots, (p-1)$$
-The following table shows the corresponding `t values` and `p values` for each of the fit coefficients:
+The following table shows the corresponding `t values` and `p values` for each of the fitted coefficients:
 
 ```{r}
-gen_kable(summary(nutrition_model)$coef)
+summary(nutrition_model)$coef
+gen_kable(summary(nutrition_model)$coef, caption = "Estimated Coefficients")
 ```
+
+(Note: Some of the `p values` are so small that are shown as `0`)
 
 ```{r}
 (p_val <- p_val_for_significance(nutrition_model))
@@ -173,12 +187,12 @@ coefs <- nutrition_model$coefficients
 gen_kable(coefs, col_names = "Beta Estimate")
 ```
 
-- $\hat\beta_0$ Represents the number of calories of a food with `0` Fat, Sugar and Sodium. Of course this is an unrealistic case in the model.
+- $\hat\beta_0$, `(Intercept)` Represents the number of calories of a food with `0` Fat, Sugar and Sodium. Of course this is an unrealistic case in the model.
 - $\hat\beta_1$, `Fat`. The average extra `Calories` for an increase in `1 gr` of  `Fat` given a fixed value of `Sugar` and `Sodium`
 - $\hat\beta_2$, `Sugar`. The average extra `Calories` for an increase in `1 gr` of  `Sugar` given a fixed value of `Fat` and `Sodium`
 - $\hat\beta_3$, `Sodium`. The average extra `Calories` for an increase in `1 mgr` of  `Sodium` given a fixed value of `Fat` and `Sugar`
 
-Note that we say `extra` to express that `Calories` increase when the predictors also increase. This is explained by the positive sign of the Estimates $\hat\beta_i$.
+Note that we say `extra` to express that `Calories` increase when the predictors also increase. This is explained by the positive sign of the Estimates $\hat\beta_j$.
 
 **(c)** Use your model to predict the number of `Calories` in a Filet-O-Fish. According to [McDonald's publicized nutrition facts](https://www.mcdonalds.com/us/en-us/about-our-food/nutrition-calculator.html), the Filet-O-Fish contains 18g of fat, 5g of sugar, and 580mg of sodium.
 
@@ -193,7 +207,7 @@ filet_o_fish <- data.frame(
 (cals <- predict(nutrition_model, newdata = filet_o_fish))
 ```
 
-*Prediction:* `r cals` Cal.
+*Prediction:* **`r fr(cals, digits = 4)` Cal**.
 
 **(d)** Calculate the standard deviation, $s_y$, for the observed values in the Calories variable. Report the value of $s_e$ from your multiple regression model. Interpret both estimates in the context of this problem.
 
@@ -202,8 +216,14 @@ filet_o_fish <- data.frame(
 ```{r}
 (s_y <- sd(nutrition$Calories))
 (s_e <- summary(nutrition_model)$sigma)
+
+left <- mean(nutrition$Calories) - s_y
+right <- mean(nutrition$Calories) + s_y
 ```
 
+$s_y$ explains how spread (far from the mean in average) the response observations (`Calories`) are, in this case, ~68% are in the range: **(`r fr(left)`,`r fr(right)`)**
+
+The `unbiased` estimated $s_e$ from our model, represents how far our estimates are from the actual observed response (`Calories`). We expect this to be small.
 
 **(e)** Report the value of $R^2$ for the model. Interpret its meaning in the context of the problem.
 
@@ -230,9 +250,10 @@ The influence by the other predictors is explained if we consider how the `Stand
 $$
 \text{SE}[\hat{\beta}_j] = s_e \sqrt{C_{jj}}
 $$
-$s_e$ uses the fitted values $\hat{y}_i$ resulting from the estimated $\hat\beta_i$, as well as the `degrees of freedom`.
 
-$C_{jj}$ is an entry in the `Covariance Matrix`
+- $s_e$ uses the fitted values $\hat{y}_i$ resulting from the estimated $\hat\beta_i$, as well as the `degrees of freedom`.
+
+- $C_{jj}$ is an entry in the `Covariance Matrix`
 
 
 **(g)** Calculate a 95% confidence interval for $\beta_0$. Give an interpretation of the interval in the context of the problem.
@@ -243,7 +264,7 @@ $C_{jj}$ is an entry in the `Covariance Matrix`
 (conf_beta_0 <- confint(nutrition_model, level = 0.95, parm = "(Intercept)"))
 ```
 
-With `95%` confidence we can say that the mean `Calories` for a food with `0` value in the predictors is in the range: $\left(`r conf_beta_0[1]`, `r conf_beta_0[2]`\right)$. Note that all values in that range are unrealistic for that particular case, but we can ignore this extrapolation.
+With `95%` confidence we can say that the mean `Calories` for a food with `0` value in the predictors is in the range: $\left(`r fr(conf_beta_0[1])`, `r fr(conf_beta_0[2])`\right)$. Note that all values in that range are unrealistic for that particular case, but we can ignore this extrapolation.
 
 **(h)** Use a 99% confidence interval to estimate the mean Calorie content of a food with 15g of fat, 0g of sugar, and 260mg of sodium, which is true of a medium order of McDonald's french fries. Interpret the interval in context.
 
@@ -259,7 +280,7 @@ new_food <- data.frame(
                  interval = "confidence", level = 0.99))
 ```
 
-For a food with `Fat=15, Sugar=0g and Sodium 260mg`, we are 99% confident that the mean of the response (`Calories`) is in the range: $\left(`r conf_new[2]`, `r conf_new[3]`\right)$
+For a food with `Fat=15, Sugar=0g and Sodium 260mg`, we are 99% confident that the mean of the response (`Calories`) is in the range: $\left(`r fr(conf_new[2])`, `r fr(conf_new[3])`\right)$
 
 **(i)** Use a 99% prediction interval to predict the Calorie content of a Crunchy Taco Supreme, which has 11g of fat, 2g of sugar, and 340mg of sodium according to [Taco Bell's publicized nutrition information](https://www.tacobell.com/nutrition/info). Interpret the interval in context.
 
@@ -273,11 +294,9 @@ taco_supreme <- data.frame(
 )
 (pred_inter <- predict(nutrition_model, newdata = taco_supreme,
                  interval = "prediction", level = 0.99))
-(predict(nutrition_model, newdata = taco_supreme,
-                 interval = "confidence", level = 0.99))
 ```
 
-The prediction interval considering the estimates variability (i.e. $\sigma^2$) is $\left(`r pred_inter[2]`, `r pred_inter[3]`\right)$. We expect with 99% confidence that the estimate for the `Crunchy Taco Supreme` will be in that range.
+The prediction interval considering the estimates variability (i.e. $\sigma^2$) is $\left(`r fr(pred_inter[2])`, `r fr(pred_inter[3])`\right)$. We expect with 99% confidence that the estimate for the `Crunchy Taco Supreme` will be in that range.
 
 ***
 
@@ -313,7 +332,7 @@ After reading in the data but prior to any modeling, you should clean the data s
 
 **Reading data**
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 goalies <- read_csv("./goalies17.csv") 
 # Remove columns
 goalies <- subset(goalies, select = -c(Player, GS, L, TOL, SV_PCT, GAA))
@@ -349,8 +368,8 @@ $$H_0: \beta_{SA} = \beta_{MIN} = \beta_{SO} = 0$$
 (anova_12 <- anova(model_1, model_2))
 ```
 
-- The value of the test statistic: **`r anova_12[2, "F"]`**
-- The p-value of the test: **`r anova_12[2, "Pr(>F)"]`**
+- The value of the test statistic: **`r fr(anova_12[2, "F"])`**
+- The p-value of the test: **`r fr(anova_12[2, "Pr(>F)"])`**
 
 ```{r}
 (f_test_decision <- stat_decide(anova_12[2, "Pr(>F)"], alpha = 0.05))
@@ -365,20 +384,30 @@ Let's take a look to the $R^2$ and the `Residual Sum of squares`
 ```{r}
 r2_rss_data <- data.frame(
   row.names = c("Model 1", "Model 2"),
+  "Predictors" = c("GA + SV", "GA + SV + SA + MIN + SO"),
   "R^2" = c(summary(model_1)$r.squared, summary(model_2)$r.squared),
   "RSS" = c(sum((goalies$W - model_1$fitted.values) ^ 2), sum((goalies$W - model_2$fitted.values) ^ 2))
 )
 
-gen_kable(r2_rss_data)
-model_a <- model_2
+gen_kable(r2_rss_data, caption = "Model 1 vs Model 2")
+model_a <- model_1
 ```
 
-Given the evidence `model 2` seems like a good choice:
+`model 2` Pros and Cons:
 
-- We rejected $H_0$ with a very small `p value` at reasonable $alpha$
-- The `Residual Sum of squares` seems significantly smaller for `model 2`
-- Although `model 2` has more predictors it is still interpretable, with more testing we could check if all those extra predictors are actually significant.
+* Pros
+  * We rejected $H_0$ with a very small `p value` at reasonable $alpha$
+  * The `Residual Sum of squares` seems significantly smaller than it is for `model 1`
 
+* Cons
+  * `model 2` has more predictors, making it harder in interpret.
+  * One of those extra predictors `SO` seems to be not very significant with a relatively high `p-value` of `r summary(model_2)$coef["SO", "Pr(>|t|)"]`, at least when combined with the other 4 predictors.
+ 
+I would make a case for picking `model 1`:
+
+- It is smaller and easier to interpret.
+- Its $R^2$ is very close to the one for `model 2`.
+- It is a good base to explore if `SA` and `MIN` are worth keeping in the model.
 
 **(b)** Use an $F$-test to compare Model 3 to your preferred model from part **(a)**. Report the following:
 
@@ -392,14 +421,14 @@ Given the evidence `model 2` seems like a good choice:
 
 In this case the null hypothesis is:
 
-$$H_0: \beta_{FISRT} = \beta_{LAST} = \beta_{Active} = \beta_{GP} = \beta_{PIM} = 0$$
+$$H_0: \beta_{SA} = \beta_{MIN} = \beta_{SO} = \beta_{FISRT} = \beta_{LAST} = \beta_{Active} = \beta_{GP} = \beta_{PIM} = 0$$
 
 ```{r}
 (anova_a3 <- anova(model_a, model_3))
 ```
 
-- The value of the test statistic: **`r anova_a3[2, "F"]`**
-- The p-value of the test: **`r anova_a3[2, "Pr(>F)"]`**
+- The value of the test statistic: **`r fr(anova_a3[2, "F"])`**
+- The p-value of the test: **`r fr(anova_a3[2, "Pr(>F)"])`**
 
 ```{r}
 (f_test_decision <- stat_decide(anova_a3[2, "Pr(>F)"], alpha = 0.05))
@@ -407,26 +436,29 @@ $$H_0: \beta_{FISRT} = \beta_{LAST} = \beta_{Active} = \beta_{GP} = \beta_{PIM} 
 
 *Statistical decision at * $\alpha = 0.05$ : **`r f_test_decision`**
 
-At least one of the predictors in the null hypothesis is significant given that `GA, SV, SA, MIN, SO` are already in the model.
+At least one of the predictors in the null hypothesis is significant given that `GA, SV` are already in the model.
 
 Let's take a look to the $R^2$ and the `Residual Sum of squares`
 
 ```{r}
 r2_rss_data <- data.frame(
-  row.names = c("Model 2", "Model 3"),
+  row.names = c("Model 1", "Model 3"),
+  "Predictors" = c("GA + SV", "(All Predictors)"),
   "R^2" = c(summary(model_a)$r.squared, summary(model_3)$r.squared),
   "RSS" = c(sum((goalies$W - model_a$fitted.values) ^ 2), sum((goalies$W - model_3$fitted.values) ^ 2))
 )
 
-gen_kable(r2_rss_data)
+gen_kable(r2_rss_data, caption = "Model 1 vs Model 3")
 model_b <- model_a
 ```
 
-Given the evidence `model 2` still seems like a good choice, it is true that we rejected $H_0$, but:
+Based only in the test for the `F statistic` we would prefer `model 3` but:
 
-- For both models (2 and 3) the $R^2$ and `Residual Sum of squares` are very close.
-- `model 2` is smaller and easier to interpret than `model 3`.
+- For both models (1 and 3) the $R^2$ is very close.
+- `model 1` is smaller and easier to interpret than `model 3`.
+- Some of the predictors in `model 3` have a very low `p value`.
 
+I would still prefer `model 1`.
 
 **(c)** Use a $t$-test to test $H_0: \beta_{\texttt{SV}} = 0 \ \text{vs} \ H_1: \beta_{\texttt{SV}} \neq 0$ for the model you preferred in part **(b)**. Report the following:
 
@@ -441,8 +473,8 @@ Given the evidence `model 2` still seems like a good choice, it is true that we 
 (p_val <- summary(model_b)$coef["SV", "Pr(>|t|)"])
 ```
 
-- The value of the test statistic: `r t_val`
-- The p-value of the test: `r p_val`
+- The value of the test statistic: **`r fr(t_val)`**
+- The p-value of the test: **`r fr(p_val)`**
 
 ```{r}
 (f_test_decision <- stat_decide(p_val, alpha = 0.05))
@@ -450,7 +482,7 @@ Given the evidence `model 2` still seems like a good choice, it is true that we 
 
 *Statistical decision at * $\alpha = 0.05$ : **`r f_test_decision`**
 
-`SV` is significant given that `GA, SA, MIN and SO` are already in the model.
+`SV` is significant given that `GA` is already in the model.
 
 ***
 
@@ -512,7 +544,9 @@ are_equal <- all.equal(s_e, summary(ozone_model)$sigma)
 
 $s_e = `r s_e`$
 
-Are calculated $s_e$ and `sigma` reported by `R` the same?: `r are_equal`
+$sigma$ reported by `R` = **`r summary(ozone_model)$sigma`**
+
+Are calculated $s_e$ and `sigma` reported by `R` the same?: **`r are_equal`**
 
 **(e)** Calculate $R^2$ without the use of `lm()`. That is, continue with your results from **(a)** and **(d)**, and perform additional operations to obtain the result. Output this result. Also, verify that this result is the same as the result obtained from `lm()`.
 
@@ -524,7 +558,9 @@ r_2 <- ssreg / sst
 are_equal <- all.equal(r_2, summary(ozone_model)$r.squared)
 ```
 
-$R^2 = `r r_2`$
+Calculated $R^2 = `r r_2`$
+
+$R^2$ reported by `R` = **`r summary(ozone_model)$r.squared`**
 
 Are calculated $R^2$ and the one reported by `R` the same?: `r are_equal`
 
@@ -584,7 +620,7 @@ model_full <- lm(mpg ~ ., data = auto_trn)
 model_d <- lm(mpg ~ displacement, data = auto_trn)
 model_wy <- lm(mpg ~ weight + year, data = auto_trn)
 model_way <- lm(mpg ~ weight + acceleration + year, data = auto_trn)
-model_wcy <- lm(mpg ~ weight + cylinders + year, data = auto_trn)
+model_woy <- lm(mpg ~ weight + origin + year, data = auto_trn)
 
 rmse <- function(model, expected, data) {
   predicted <- predict(model, newdata = data)
@@ -596,23 +632,25 @@ rmse_trn_full <- rmse(model_full, auto_trn$mpg, data = auto_trn)
 rmse_trn_d <- rmse(model_d, auto_trn$mpg, data = auto_trn)
 rmse_trn_wy <- rmse(model_wy, auto_trn$mpg, data = auto_trn)
 rmse_trn_way <- rmse(model_way, auto_trn$mpg, data = auto_trn)
-rmse_trn_wcy <- rmse(model_wcy, auto_trn$mpg, data = auto_trn)
+rmse_trn_woy <- rmse(model_woy, auto_trn$mpg, data = auto_trn)
  
 rmse_tst_full <- rmse(model_full, auto_tst$mpg, data = auto_tst)
 rmse_tst_d <- rmse(model_d, auto_tst$mpg, data = auto_tst)
 rmse_tst_wy <- rmse(model_wy, auto_tst$mpg, data = auto_tst)
 rmse_tst_way <- rmse(model_way, auto_tst$mpg, data = auto_tst)
-rmse_tst_wcy <- rmse(model_wcy, auto_tst$mpg, data = auto_tst)
+rmse_tst_woy <- rmse(model_woy, auto_tst$mpg, data = auto_tst)
 
 rmse_summary <- data.frame(
-  "Train RMSE" = c(rmse_trn_full, rmse_trn_d, rmse_trn_wy, rmse_trn_way, rmse_trn_wcy),
-  "Test RMSE" = c(rmse_tst_full, rmse_tst_d, rmse_tst_wy, rmse_tst_way, rmse_tst_wcy)
+  "Predictors" = c("(All)", "displacement", "weight + year", "weight + acceleration + year", "weight + origin + year"),
+  "Train RMSE" = c(rmse_trn_full, rmse_trn_d, rmse_trn_wy, rmse_trn_way, rmse_trn_woy),
+  "Test RMSE" = c(rmse_tst_full, rmse_tst_d, rmse_tst_wy, rmse_tst_way, rmse_tst_woy)
 )
 
-gen_kable(rmse_summary, col_names = c("Train RMSE", "Test RMSE"))
+gen_kable(rmse_summary, col_names = c("Predictors","Train RMSE", "Test RMSE"), add_row_names = FALSE)
 
 ```
 
+`model_woy` with predictors `weight + origin + year` has the lowest `RMSE`. Although the `full` model has a similar `RMSE`, **`model_woy` is a better choice** since it is smaller and easier to interpret.
 
 ***
 
@@ -676,7 +714,7 @@ sim_data <- as.data.frame(cbind(y, X[,2:6]))
 (sum(diag(C)))
 ```
 
-Sum of the diagonal: `r sum(diag(C))`
+Sum of the diagonal: **`r sum(diag(C))`**
 
 `sim_data` 5th row:
 
@@ -757,7 +795,7 @@ gen_kable(t_data, col_names = c("beta_1","beta_hat_1"),
           row_names = c("Mean", "Variance"), caption = "Comparing Mean and Variance")
 ```
 
-The `mean` and `variance` values obtained from simulations are close to the expected ones. Given that, the `histogram` for the estimated $\hat\beta_1$ and curve
+The `mean` and `variance` values obtained from simulations are close to the expected ones. Given that, the `histogram` for the estimated $\hat\beta_1$ and `curve` for the true distribution match.
 
 ```{r}
 hist(beta_hat_1, probability = TRUE, breaks = 20,
@@ -770,8 +808,6 @@ hist(beta_hat_1, probability = TRUE, breaks = 20,
 curve(dnorm(x, mean = beta_1, sd = sqrt(beta_1_var)),
       col = "darkorange", add = TRUE, lwd = 3)
 
-#curve(dnorm(x, mean = beta_hat_1_mean, sd = sqrt(beta_hat_1_var)),
-#      col = "gray80", add = TRUE, lwd = 3)
 ```
 
 
@@ -781,10 +817,6 @@ curve(dnorm(x, mean = beta_1, sd = sqrt(beta_1_var)),
 
 ```{r}
 proportion3 <- sum(beta_3_pval < 0.1) / length(beta_3_pval)
-
-# x3 seems not be significant as we failed to reject  beta_3=0
-hist(beta_3_pval, probability = TRUE, breaks = 20,
-     xlab = "beta_3_pval", main = "", border = "dodgerblue")
 ```
 
 We know from our model that $\beta_3 = 0$. Hence, we expect a relatively small proportion of Rejections of the `Null Hypothesis` $H_0: \beta_3 = 0$
@@ -808,6 +840,6 @@ We could then say that, given $\alpha=0.01$, in our simulations we **Correctly R
 The histogram below shows that most of the `beta_5_pval` values are located closer to `0`, which is what we would expect.
 
 ```{r}
-hist(beta_5_pval, probability = TRUE, breaks = 20,
-     xlab = "beta_5_pval", main = "", border = "dodgerblue")
+hist(beta_5_pval, breaks = 20,
+     xlab = expression("p values for " ~ H[0]: hat(beta)[5] ~ "= 0"), main = "p values Distribution", border = "dodgerblue")
 ```

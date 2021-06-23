@@ -1,0 +1,265 @@
+---
+title: 'Week 6 - Midterm Assignment: A Simulation Project'
+author: "STAT 420, Summer 2021,Alejandro Pimentel (ap41)"
+date: ''
+output:
+  html_document: 
+    theme: readable
+    toc: yes  
+    code_folding: show
+  pdf_document: default
+urlcolor: cyan
+editor_options: 
+  chunk_output_type: console
+---
+
+```{css, echo=FALSE}
+p, li, td {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+```
+
+# Simulation Study 1: Significance of Regression
+
+## Introduction
+
+In this simulation study we will investigate the significance of regression test. We will simulate from two different models:
+
+1. The **"significant"** model
+
+\[
+Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i3} + \epsilon_i
+\]
+
+where $\epsilon_i \sim N(0, \sigma^2)$ and
+
+- $\beta_0 = 3$,
+- $\beta_1 = 1$,
+- $\beta_2 = 1$,
+- $\beta_3 = 1$.
+
+
+2. The **"non-significant"** model
+
+\[
+Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i3} + \epsilon_i
+\]
+
+where $\epsilon_i \sim N(0, \sigma^2)$ and
+
+- $\beta_0 = 3$,
+- $\beta_1 = 0$,
+- $\beta_2 = 0$,
+- $\beta_3 = 0$.
+
+For both, we will consider a sample size of $25$ and three possible levels of noise. That is, three values of $\sigma$.
+
+- $n = 25$
+- $\sigma \in (1, 5, 10)$
+
+**Methods**
+
+Read the `csv` file with our samples and take a look to some of them.
+
+```{r message=FALSE, warning=FALSE}
+library(readr)
+study1_data <- read_csv("./study_1.csv")
+
+head(study1_data)
+
+```
+
+```{r}
+# Set a seed to have a stable generation of random numbers
+birthday = 19820426
+set.seed(birthday)
+```
+
+For the simulations we need to define a few functions.
+
+First, a function to generate the responses $y$. For which we need:
+
+- A matrix with the predictors values.
+- A matrix of `p` by 1 where `p` is the number of parameters `beta` in the model.
+- A `sigma` to generate noise ($\epsilon$) to the response.
+
+The output is a data frame with all predictors and `y` values added.
+
+```{r}
+generate_mlr_data <- function(X, betas, sigma = 1) {
+  n <- nrow(X)
+  epsilon <- rnorm(n = n, mean = 0, sd = sigma)
+  X_full <- as.matrix(cbind(1, X))
+  X$y <- (X_full %*% betas) + epsilon
+  as.data.frame(X)
+}
+
+```
+
+Next, we need a function that runs a number of simulations with a fixed $\beta_i$ values and `sigma`. For each `fitted model` the function extracts:
+
+- The **$F$ statistic** for the significance of regression test.
+- The **p-value** for the significance of regression test
+- **$R^2$**
+
+```{r}
+loop_simulation <- function (X, betas, num_simulations = 2000, sigma = 1) {
+  fstats <- rep(0, num_simulations)
+  pvals <- rep(0, num_simulations)
+  r2s <- rep(0, num_simulations)
+  for (i in 1:num_simulations) {
+    sim_data <- generate_mlr_data(X, matrix(betas), sigma)
+    sim_model <- lm(y ~ ., data = sim_data)
+    ft <- unname(summary(sim_model)$fstatistic)
+    fstats[i] <- ft[1]
+    pvals[i] <- 1 - pf(ft[1], df1 = ft[2], df2 = ft[3])
+    r2s[i] <- summary(sim_model)$r.squared
+  }
+  list(
+    fstats = fstats,
+    pvals = pvals,
+    r2s = r2s
+    )
+}
+
+```
+
+We are set to run the 6 simulations, the code below does it.
+
+```{r}
+# Only take the predictor columns x_i
+X <- study1_data[, 2:4]
+# The beta values for the significant model
+sig_betas <- c(3, 1, 1, 1)
+# The beta values for the non-significant model
+nosig_betas <- c(3, 0, 0, 0)
+# The 3 sigma values to use on each model
+sigma_1 <- 1
+sigma_5 <- 5
+sigma_10 <- 10
+
+num_sims <- 2000
+
+# Simulations for the significant model 
+signif_1 <- loop_simulation(X, sig_betas, num_simulations = num_sims, sigma_1)
+signif_5 <- loop_simulation(X, sig_betas, num_simulations = num_sims, sigma_5)
+signif_10 <- loop_simulation(X, sig_betas, num_simulations = num_sims, sigma_10)
+
+# Simulations for the non-significant model 
+nosignif_1 <- loop_simulation(X, nosig_betas, num_simulations = num_sims, sigma_1)
+nosignif_5 <- loop_simulation(X, nosig_betas, num_simulations = num_sims, sigma_5)
+nosignif_10 <- loop_simulation(X, nosig_betas, num_simulations = num_sims, sigma_10)
+
+```
+
+**Results**
+
+Here we present a collection of graph to analyze the simulation results. To keep things DRY I define a function that shows:
+
+- A histogram of the `f statistic` values obtained in the simulation.
+- The `true` curve of the distribution given the degrees of freedom in our model (when the distribution is known).
+
+```{r}
+graph_helper <- function(simuldata, sigma, dist_curve = "", color, title) {
+  hist(simuldata, probability = TRUE, breaks = 15,
+     xlab = title, 
+     main = paste(title," ( sigma =", sigma,")"), 
+     col = color,
+     border = "aliceblue")
+
+  if(dist_curve == "f") {
+    curve(df(x, df1 = 4 - 1, df2 = 25 - 4),
+        col = "darkorange", 
+        add = TRUE, lwd = 3
+        )
+  }
+  
+  if(dist_curve == "unif") {
+    curve(dunif(x),
+      col = "darkorange", 
+      add = TRUE, lwd = 3
+      )
+  }
+  
+  if(dist_curve != "") {
+    legend("topright", c("Simulated", "Real"), 
+         lty = c(1, 2),
+         lwd = 3,
+         col = c(color, "darkorange"))
+  }
+}
+
+```
+
+
+*Graph 1.1 - F Statistics for the `significant model` on each $\sigma$*
+
+```{r}
+par(mfrow=c(1, 3))
+title <- "F Statistic Distribution"
+graph_helper(signif_1$fstats, sigma_1, "f", color = "deepskyblue3", title)
+graph_helper(signif_5$fstats, sigma_5, "f", color = "deepskyblue3", title)
+graph_helper(signif_10$fstats, sigma_10, "f", color = "deepskyblue3", title)
+```
+
+
+
+*Graph 1.2 - F Statistics for the `non-significant model` on each $\sigma$*
+
+```{r}
+par(mfrow=c(1, 3))
+graph_helper(nosignif_1$fstats, sigma_1, "f", color = "darkgray", title)
+graph_helper(nosignif_5$fstats, sigma_5, "f", color = "darkgray", title)
+graph_helper(nosignif_10$fstats, sigma_10, "f", color = "darkgray", title)
+```
+
+
+
+*Graph 2.1 - p-values for the `significant model` on each $\sigma$*
+
+```{r}
+par(mfrow=c(1, 3))
+title <- "p-values Distribution"
+graph_helper(signif_1$pvals, sigma_1, "unif", color = "deepskyblue3", title)
+graph_helper(signif_5$pvals, sigma_5, "unif", color = "deepskyblue3", title)
+graph_helper(signif_10$pvals, sigma_10, "unif", color = "deepskyblue3", title)
+
+```
+
+
+
+*Graph 2.2 - p-values for the `non-significant model` on each $\sigma$*
+
+```{r}
+par(mfrow=c(1, 3))
+graph_helper(nosignif_1$pvals, sigma_1, "unif", color = "darkgray", title)
+graph_helper(nosignif_5$pvals, sigma_5, "unif", color = "darkgray", title)
+graph_helper(nosignif_10$pvals, sigma_10, "unif", color = "darkgray", title)
+```
+
+
+
+*Graph 3.1 - $R^2$ for the `significant model` on each $\sigma$*
+
+```{r}
+par(mfrow=c(1, 3))
+title <- "R^2 Distribution"
+graph_helper(signif_1$r2s, sigma_1, color = "deepskyblue3", title = title)
+graph_helper(signif_5$r2s, sigma_5, color = "deepskyblue3", title = title)
+graph_helper(signif_10$r2s, sigma_10, color = "deepskyblue3", title = title)
+```
+
+
+
+*Graph 3.2 - $R^2$ for the `non-significant model` on each $\sigma$*
+
+```{r}
+par(mfrow=c(1, 3))
+title <- "R^2 Distribution"
+graph_helper(nosignif_1$r2s, sigma_1, color = "darkgray", title = title)
+graph_helper(nosignif_5$r2s, sigma_5, color = "darkgray", title = title)
+graph_helper(nosignif_10$r2s, sigma_10, color = "darkgray", title = title)
+```
+
+
+**Discussion**

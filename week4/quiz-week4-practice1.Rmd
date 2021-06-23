@@ -1,0 +1,123 @@
+# Question 1
+
+# Remember, df1 is p - q and df2 is n - p
+# p is the number of parameters (predictors + 1)
+# q is the number of parameters of the smaller model (q < p)
+
+# We want the right (more extreme side) starting from the F statistic
+# value, so we either use the upper tail
+pf(2.4, df1 = 10 - 1, df2 = 30 - 10, lower.tail = FALSE)
+# Or we substract from 1
+1 - pf(2.4, df1 = 10 - 1, df2 = 30 - 10)
+
+# F distribution starts in 0 and is not symetrical, so below line
+# does not work
+pf(-2.4, df1 = 10 - 9, df2 = 30 - 10)
+
+
+# Question 2
+
+# p = 6 with 5 predictors
+# t_val = -1.3
+# n = 20
+# if we remove only one predictor, we can use t statistic
+# we need the value from both sides when dealing with t values
+
+# Each beta_hat has its own p and t values. Which are related to 
+# the corresponding null hypothesis
+2 * pt(-1.3, df = 20 - 6)
+
+
+# Question 3
+
+set.seed(42)
+x_values = data.frame(
+  x1 = runif(15),
+  x2 = runif(15),
+  x3 = runif(15)
+)
+
+
+
+X <- cbind(1, x_values$x1, x_values$x2, x_values$x3)
+C <- solve(t(X) %*% X)
+
+# SD (sqrt(Var[beta])) is the real value of SD
+sqrt(9 * C[3, 3])
+
+# Question 4
+
+sm <- lm(Fertility ~ ., data = swiss)
+
+new_pro <- data.frame(
+  Agriculture = 54,
+  Examination = 23,
+  Education = 13,
+  Catholic = 60,
+  Infant.Mortality = 24
+)
+
+predict(sm, newdata = new_pro)
+
+
+# Question 5
+
+confint(sm, level = 0.99, parm = "Catholic")[1, 2]
+
+# Queation 6
+
+summary(sm)$coef["Examination", "Pr(>|t|)"]
+
+# Calculate manually
+head(swiss[, 2:6])
+X <- as.matrix(swiss[, 2:6])
+X <- unname(cbind(1, X))
+C <- solve(t(X) %*% X)
+
+SE_beta_2 <- summary(sm)$sigma * sqrt(C[3, 3])
+t_val <- sm$coef[3] / SE_beta_2
+2 * pt(-abs(t_val), df = nrow(swiss) - 6)
+
+# Question 7
+
+new_pro <- data.frame(
+  Agriculture = 40,
+  Examination = 28,
+  Education = 10,
+  Catholic = 42,
+  Infant.Mortality = 27
+)
+
+predict(sm, newdata = new_pro, level = 0.95, 
+        interval = "confidence")[1, "lwr"]
+
+# Question 8
+
+predict(sm, newdata = new_pro, level = 0.95, 
+        interval = "prediction")[1, "lwr"]
+
+# Question 9
+
+summary(sm)$fstatistic[1]
+
+# Question 10
+
+summary(sm)
+
+pval <- anova(lm(Fertility ~ 1, data = swiss), sm)[2, "Pr(>F)"]
+pval < 0.01
+
+1 - pf(summary(sm)$fstatistic[1], df1 = 6 - 1, 
+       df2 = nrow(swiss) - 6)
+
+# Question 11
+
+sm_3 <- lm(Fertility ~ Education + Catholic + Infant.Mortality
+           , data = swiss)
+
+anova(sm_3, sm)[2, "Pr(>F)"]
+
+
+
+
+

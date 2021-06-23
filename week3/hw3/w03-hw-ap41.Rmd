@@ -647,7 +647,7 @@ calc_pred_int <- function(model, newdata, level = 0.95) {
 
 **(b)** After writing the function, run this code:
 
-```{r, eval = FALSE}
+```{r}
 newcat_1 = data.frame(Bwt = 4.0)
 calc_pred_int(cat_model, newcat_1)
 

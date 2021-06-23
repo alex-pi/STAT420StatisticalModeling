@@ -969,9 +969,13 @@ Y_i = \beta_0 + \beta_1 x_i + \epsilon_i.
 <p><strong>(b)</strong> After writing the function, run this code:</p>
 <pre class="r"><code>newcat_1 = data.frame(Bwt = 4.0)
 calc_pred_int(cat_model, newcat_1)</code></pre>
+<pre><code>## estimate    lower    upper 
+## 15.77959 12.83018 18.72900</code></pre>
 <p><strong>(c)</strong> After writing the function, run this code:</p>
 <pre class="r"><code>newcat_2 = data.frame(Bwt = 3.3)
 calc_pred_int(cat_model, newcat_2, level = 0.90)</code></pre>
+<pre><code>## estimate    lower    upper 
+## 12.95574 10.53099 15.38050</code></pre>
 </div>
 
 
