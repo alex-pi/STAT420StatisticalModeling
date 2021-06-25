@@ -19,6 +19,56 @@ p, li, td {
 }
 ```
 
+```{r message=FALSE, warning=FALSE, class.source = 'fold-hide'}
+library(knitr)
+library(kableExtra)
+library(dplyr)
+
+format_numerics <- function(data, digits = 2, notation_threshold = 0.00001) {
+  # make sure is a data.frame, then format
+  if(!is.data.frame(data)){
+    data <- as.data.frame(data)
+  }  
+  data %>% 
+    mutate_if(
+      is.numeric, 
+      function(x) {
+        if_else(
+          abs(x) < notation_threshold, 
+          formatC(x, digits = digits, format = "e"), 
+          formatC(x, digits = digits, format = "f", drop0trailing = FALSE)
+        )
+      }
+    )
+}
+
+gen_kable <- function(table_data, add_row_names = TRUE, caption = "", col_names = c(), row_names = c()) {
+  f_data <- format_numerics(table_data) 
+  if(length(col_names) != 0){
+    colnames(f_data) <- col_names
+  }
+  if(length(row_names) != 0){
+    rownames(f_data) <- row_names
+  }  
+  f_data %>%
+  kable(., format = "html", row.names = add_row_names,
+        caption = caption, escape = FALSE) %>%
+    kable_styling(bootstrap_options = c("striped", "hover"),
+                  full_width = F,
+                  font_size = 14,
+                  position = "center")
+}
+
+fr <- function(nums, digits = 5, notation_threshold = 0.000001) {
+  if_else(
+    abs(nums) < notation_threshold, 
+    formatC(nums, digits = digits, format = "e"), 
+    format(round(nums, digits), nsmall = digits)
+  )
+}
+
+```
+
 # Simulation Study 2: Using RMSE for Selection?
 
 ## Introduction
@@ -68,7 +118,7 @@ For each model, calculate Train and Test RMSE.
 \text{RMSE}(\text{model, data}) = \sqrt{\frac{1}{n} \sum_{i = 1}^{n}(y_i - \hat{y}_i)^2}
 \]
 
-**Methods**
+## Methods
 
 Read the `csv` file with our samples and take a look to some of them.
 
@@ -138,7 +188,7 @@ betas <- matrix(c(0, 3, -4, 1.6, -1.1, 0.7, 0.5))
 sigma1 <- 1
 sigma2 <- 2
 sigma4 <- 4
-num_sims <- 10
+num_sims <- 100
 
 rmse_s1_acc <- matrix(0, 2, 9)
 rmse_s2_acc <- matrix(0, 2, 9)
@@ -209,7 +259,15 @@ for(i in 1:num_sims) {
 
 ```
 
-```{r fig.height = 6, fig.width = 10, fig.align = "center"}
+
+## Results
+
+In this section we use a few graphs to summarize the results obtained in the simulations. The functions below will help us to 
+
+- Plot the `Average RMSE` for `test` and `train` splits for each proposed `sigma`.
+- Create a bar plot to show how many times a model got the lowest `RMSE`.
+
+```{r}
 line_plot <- function(y1, y2, sigma, title) {
   plot(1:9, y1,
        xlab = "Model size (number of predictors)", 
@@ -233,7 +291,25 @@ line_plot <- function(y1, y2, sigma, title) {
        col = c("darkorange", "cadetblue3"))  
 }
 
+bar_plot <- function(data, sigma) {
+  td <- table(data)
+  barplot(td,
+    main=paste("Model Selection based on RMSE (sigma = ", sigma," )"),
+    xlab="Number of Predictors",
+    ylab="Model Selection Count",
+    border="gray",
+    col='deepskyblue3',
+    density=500
+  )
+}
 
+```
+
+**Graph 2.1 - Comparing Average RMSE for 3 sigma values**
+
+We are interested in observing how the RMSE changes depending on the `number of predictors` or `model size`. We plot that for each of our `sigma` values.
+
+```{r fig.height = 6, fig.width = 10, fig.align = "center"}
 par(mfrow=c(1, 3), bg="ghostwhite")
 t <- "Avg. RMSE vs Model Size"
 line_plot(rmse_s1_acc[1, ] / num_sims, rmse_s1_acc[2, ] / num_sims,
@@ -244,3 +320,42 @@ line_plot(rmse_s4_acc[1, ] / num_sims, rmse_s4_acc[2, ] / num_sims,
           sigma = 4, title = t)
 ```
 
+**Graph 2.2 - Fitted models with lowest RMSE**
+
+Another important aspect to check is, which models are getting the `lowest` RMSE. The bar plots below show that for each `sigma` and the `test data`.
+
+```{r fig.height = 6, fig.width = 10, fig.align = "center"}
+
+par(mfrow=c(1, 3), bg="ghostwhite")
+bar_plot(which_mins_s1[2, ], sigma1)
+bar_plot(which_mins_s2[2, ], sigma2)
+bar_plot(which_mins_s4[2, ], sigma4)
+```
+
+The table below presents the exact proportion of `simulations` in which `model 6` (our true known model) is getting the lowest `RMSE`.
+
+```{r}
+rmse_sel <- c(mean(which_mins_s1[2, ] == 6),
+              mean(which_mins_s2[2, ] == 6),
+              mean(which_mins_s4[2, ] == 6)
+              )
+
+gen_kable(rmse_sel, col_names = c("Proportion"), 
+          caption = "Proportion of Simulations selecting model 6.",
+          row_names = c("sigma = 1", "sigma = 2", "sigma = 4"))
+
+```
+
+
+Lastly, we notice below that in the case of the `train` data, the smallest RMSE always corresponds to the ` largest model`, in this case the `model` with 9 `predictors`.
+
+```{r}
+# The values below correspond to the total number of simulations.
+sum(which_mins_s1[1, ] == 9)
+sum(which_mins_s2[1, ] == 9)
+sum(which_mins_s4[1, ] == 9)
+
+```
+
+
+## Discussion

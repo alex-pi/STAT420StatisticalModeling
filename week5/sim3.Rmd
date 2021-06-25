@@ -1,0 +1,223 @@
+---
+title: 'Week 6 - Midterm Assignment: A Simulation Project'
+author: "STAT 420, Summer 2021,Alejandro Pimentel (ap41)"
+date: ''
+output:
+  html_document: 
+    theme: readable
+    toc: yes  
+    code_folding: show
+  pdf_document: default
+urlcolor: cyan
+editor_options: 
+  chunk_output_type: console
+---
+
+```{css, echo=FALSE}
+p, li, td {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+```
+
+# Simulation Study 3: Power
+
+## Introduction
+
+In this simulation study we will investigate the **power** of the significance of regression test for simple linear regression. 
+
+\[
+H_0: \beta_{1} = 0 \ \text{vs} \ H_1: \beta_{1} \neq 0
+\]
+
+Recall, we had defined the *significance* level, $\alpha$, to be the probability of a Type I error.
+
+\[
+\alpha = P[\text{Reject } H_0 \mid H_0 \text{ True}] = P[\text{Type I Error}]
+\]
+
+Similarly, the probability of a Type II error is often denoted using $\beta$; however, this should not be confused with a regression parameter.
+
+\[
+\beta = P[\text{Fail to Reject } H_0 \mid H_1 \text{ True}] = P[\text{Type II Error}]
+\]
+
+*Power* is the probability of rejecting the null hypothesis when the null is not true, that is, the alternative is true and $\beta_{1}$ is non-zero.
+
+\[
+\text{Power} = 1 - \beta = P[\text{Reject } H_0 \mid H_1 \text{ True}]
+\]
+
+Essentially, power is the probability that a signal of a particular strength will be detected. Many things affect the power of a test. In this case, some of those are:
+
+- Sample Size, $n$
+- Signal Strength, $\beta_1$
+- Noise Level, $\sigma$
+- Significance Level, $\alpha$
+
+We'll investigate the first three.
+
+To do so we will simulate from the model
+
+\[
+Y_i = \beta_0 + \beta_1 x_i + \epsilon_i
+\]
+
+where $\epsilon_i \sim N(0, \sigma^2)$.
+
+For simplicity, we will let $\beta_0 = 0$, thus $\beta_1$ is essentially controlling the amount of "signal." We will then consider different signals, noises, and sample sizes:
+
+- $\beta_1 \in (-2, -1.9, -1.8, \ldots, -0.1, 0, 0.1, 0.2, 0.3, \ldots 1.9, 2)$
+- $\sigma \in (1, 2, 4)$
+- $n \in (10, 20, 30)$
+
+We will hold the significance level constant at $\alpha = 0.05$.
+
+For each possible $\beta_1$ and $\sigma$ combination, we will simulate from the true model at least $1000$ times. Each time, we will perform the significance of the regression test. To estimate the power with these simulations, and some $\alpha$, use
+
+\[
+\hat{\text{Power}} = \hat{P}[\text{Reject } H_0 \mid H_1 \text{ True}] = \frac{\text{# Tests Rejected}}{\text{# Simulations}}
+\]
+
+## Methods
+
+```{r}
+birthday <- 19820426
+set.seed(birthday)
+
+alpha <- 0.05
+num_sims <- 1000 
+sigmas <- c(1, 2, 4)
+n_obs <- c(10, 20, 30)
+betas_1 <- seq(-2, 2, 0.1)
+x_values <- list(seq(0, 5, length = n_obs[1])
+             ,seq(0, 5, length = n_obs[2])
+             ,seq(0, 5, length = n_obs[3])
+             #,seq(0, 5, length = n_obs[4])
+             )
+
+significance_results <- matrix(0, num_sims, length(x_values))
+# a matrix where each (i,j) is the power of a beta_i given a x_values_j.
+betas_by_powers <- matrix(0, length(betas_1), length(x_values))
+
+results_by_sigma <- vector(mode = "list", length = length(sigmas))
+
+```
+
+```{r}
+
+sim_slr <- function(x, beta_0 = 0, beta_1, sigma = 1) {
+  n <- length(x)
+  epsilon <- rnorm(n = n, mean = 0, sd = sigma)
+  y <- beta_0 + beta_1 * x + epsilon
+  sim_model <- lm(y ~ x)
+  #print(summary(sim_model)$coef["x", "Pr(>|t|)"])
+  summary(sim_model)$coef["x", "Pr(>|t|)"]
+}
+
+```
+
+Create three plots, one for each value of $\sigma$. Within each of these plots, add a “power curve” for each value of $n$ that shows how power is affected by signal strength, $\beta_1$.
+
+```{r}
+
+do_prints <- FALSE
+run_simulation <- function(sigma) {
+  # for each beta_1
+  for (bidx in 1:length(betas_1)) {
+    bi <- betas_1[bidx]
+    for (si in 1:num_sims) {             
+      
+      p_values <- sapply(x_values, sim_slr, beta_1=bi, sigma=sigma)
+      significance_results[si, ] <- (p_values < alpha)
+      if(do_prints) {
+        print(paste("beta_1=",bi,",sigma=", sigma, ",n_obs=",n_obs))
+        print(p_values)
+        print(p_values < alpha)
+        print("************************************")
+      }
+    }
+    powers <- colSums(significance_results) / num_sims
+    betas_by_powers[bidx, ] <- powers
+  }
+  betas_by_powers
+}
+
+results_sigma1 <- run_simulation(sigmas[1])
+results_sigma2 <- run_simulation(sigmas[2])
+results_sigma4 <- run_simulation(sigmas[3])
+
+```
+
+
+## Results
+
+```{r}
+power_plot <- function(x, y1, y2, y3, sigma, title) {
+  plot(x, y1,
+       xlab = "beta_1 values", 
+       ylab = paste("Signal Power (", num_sims, "simulations )"),
+       main = paste(title," ( sigma =", sigma,")"),     
+       col = "darkorange",
+       lwd=2.5,
+       lty=2,
+       col.main='blue',
+       type='o')
+  
+  lines(x, y2,
+        lwd=2.5,
+        lty=2,        
+        col='forestgreen',
+        type='o')
+  
+  lines(x, y3,
+        lwd=2.5,
+        lty=2,        
+        col='darkorchid4',
+        type='o')  
+  
+  legend("bottomright", 
+         c(paste(n_obs[1], "Observations"),
+           paste(n_obs[2], "Observations"),
+           paste(n_obs[3], "Observations")), 
+       lty = c(3, 3, 3),
+       lwd = 3,
+       col = c("darkorange", "forestgreen", "darkorchid4"))  
+}
+```
+
+
+```{r fig.height = 10, fig.width = 10, fig.align = "center"}}
+par(mfrow=c(1, 1), bg="ghostwhite")
+power_plot(betas_1, 
+           results_sigma1[ , 1],
+           results_sigma1[ , 2],
+           results_sigma1[ , 3],
+           sigmas[1], "beta_1 Power")
+```
+
+```{r fig.height = 10, fig.width = 10, fig.align = "center"}}
+par(mfrow=c(1, 1), bg="ghostwhite")
+power_plot(betas_1, 
+           results_sigma2[ , 1],
+           results_sigma2[ , 2],
+           results_sigma2[ , 3],
+           sigmas[2], "beta_1 Power")
+```
+
+```{r fig.height = 10, fig.width = 10, fig.align = "center"}}
+par(mfrow=c(1, 1), bg="ghostwhite")
+power_plot(betas_1, 
+           results_sigma4[ , 1],
+           results_sigma4[ , 2],
+           results_sigma4[ , 3],
+           sigmas[3], "beta_1 Power")
+```
+
+
+
+
+
+
+
+
+
