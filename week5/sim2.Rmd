@@ -96,7 +96,7 @@ We will consider a sample size of $500$ and three possible levels of noise. That
 - $n = 500$
 - $\sigma \in (1, 2, 4)$
 
-We will use the data found in [`study_2.csv`](study_2.csv) for the values of the predictors. These should be kept constant for the entirety of this study. The `y` values in this data are a blank placeholder.
+We will use the data found in [`study_2.csv`](study_2.csv) for the values of the predictors. These will be kept constant for the entirety of this study. The `y` values in this data are a blank placeholder.
 
 Each time we simulate the data, we randomly split the data into train and test sets of equal sizes (250 observations for training, 250 observations for testing).
 
@@ -112,11 +112,13 @@ For each, we fit **nine** models, with forms:
 - `y ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8`
 - `y ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9`
 
-For each model, calculate Train and Test RMSE.
+For each model, we calculate Train and Test RMSE.
 
 \[
 \text{RMSE}(\text{model, data}) = \sqrt{\frac{1}{n} \sum_{i = 1}^{n}(y_i - \hat{y}_i)^2}
 \]
+
+We will repeat this process with $1000$ simulations for each of the $3$ values of $\sigma$. 
 
 ## Methods
 
@@ -140,7 +142,7 @@ We start by defining a few functions to help with the overall simulation. Namely
 
 - Calculate the RMSE.
 - Generate simulation data.
-- Get the RMSE values and minimums for each of the `9` models.
+- Get the RMSE values and minimum values for each of the `9` models.
 
 ```{r}
 rmse <- function(expected, predicted) {
@@ -165,15 +167,19 @@ collect_rmse <- function(trn_data, tst_data) {
   rmse_matrix <- matrix(-1, 2, 9)
 
   for(im in 1:9) {
+    # We take a bigger slice of the predictors until we reach 9
     trn_mod <- trn_data[, 1:(im+1)]
     tst_mod <- tst_data[, 1:(im+1)]
+    # We train the model with the train chunk ONLY
     sim_model <- lm(y ~ ., data = trn_mod)
     rmse_matrix[1, im] <- rmse(trn_mod$y, sim_model$fitted.values)
+    # We predict for the test chunk
     tst_predictions <- predict(sim_model, newdata = tst_mod)
     rmse_matrix[2, im] <- rmse(tst_mod$y, tst_predictions)
   }
   list(
     rmse_matrix = rmse_matrix,
+    # The index tell use the model number with the smallest RMSE
     trn_min_idx = which.min(rmse_matrix[1, ]),
     tst_min_idx = which.min(rmse_matrix[2, ])
     )
@@ -188,7 +194,7 @@ betas <- matrix(c(0, 3, -4, 1.6, -1.1, 0.7, 0.5))
 sigma1 <- 1
 sigma2 <- 2
 sigma4 <- 4
-num_sims <- 100
+num_sims <- 1000
 
 rmse_s1_acc <- matrix(0, 2, 9)
 rmse_s2_acc <- matrix(0, 2, 9)
@@ -239,7 +245,7 @@ for(i in 1:num_sims) {
   rmse_sigma4 <- collect_rmse(data_sigma4_trn, data_sigma4_tst)
   
   # Accumulate the rmse in a 2 by 9 matrix, 
-  # we'll use it for the average
+  # we'll use it later to get the portion of correct model selection
   rmse_s1_acc <- rmse_s1_acc + rmse_sigma1$rmse_matrix
   rmse_s2_acc <- rmse_s2_acc + rmse_sigma2$rmse_matrix
   rmse_s4_acc <- rmse_s4_acc + rmse_sigma4$rmse_matrix
@@ -262,16 +268,17 @@ for(i in 1:num_sims) {
 
 ## Results
 
-In this section we use a few graphs to summarize the results obtained in the simulations. The functions below will help us to 
+In this section we use a few graphs to summarize the results obtained in the simulations. The functions below will help us to:
 
 - Plot the `Average RMSE` for `test` and `train` splits for each proposed `sigma`.
 - Create a bar plot to show how many times a model got the lowest `RMSE`.
 
 ```{r}
-line_plot <- function(y1, y2, sigma, title) {
+line_plot <- function(y1, y2, sigma, title, show_ylab = FALSE) {
+  ylab <- ifelse(show_ylab, paste("Average RMSE (", num_sims, "simulations )"), "")
   plot(1:9, y1,
        xlab = "Model size (number of predictors)", 
-       ylab = paste("Average RMSE (", num_sims, "simulations )"),
+       ylab = ylab,
        main = paste(title," ( sigma =", sigma,")"),     
        col = "darkorange",
        lwd=2.5,
@@ -299,13 +306,14 @@ bar_plot <- function(data, sigma) {
     ylab="Model Selection Count",
     border="gray",
     col='deepskyblue3',
-    density=500
+    density=500,
+    ylim = c(0, 600)
   )
 }
 
 ```
 
-**Graph 2.1 - Comparing Average RMSE for 3 sigma values**
+
 
 We are interested in observing how the RMSE changes depending on the `number of predictors` or `model size`. We plot that for each of our `sigma` values.
 
@@ -313,14 +321,14 @@ We are interested in observing how the RMSE changes depending on the `number of 
 par(mfrow=c(1, 3), bg="ghostwhite")
 t <- "Avg. RMSE vs Model Size"
 line_plot(rmse_s1_acc[1, ] / num_sims, rmse_s1_acc[2, ] / num_sims,
-          sigma = 1, title = t)
+          sigma = 1, title = t, show_ylab = TRUE)
 line_plot(rmse_s2_acc[1, ] / num_sims, rmse_s2_acc[2, ] / num_sims,
           sigma = 2, title = t)
 line_plot(rmse_s4_acc[1, ] / num_sims, rmse_s4_acc[2, ] / num_sims,
           sigma = 4, title = t)
 ```
 
-**Graph 2.2 - Fitted models with lowest RMSE**
+**Graph 2.1 - Comparing Average RMSE for 3 sigma values**
 
 Another important aspect to check is, which models are getting the `lowest` RMSE. The bar plots below show that for each `sigma` and the `test data`.
 
@@ -331,6 +339,8 @@ bar_plot(which_mins_s1[2, ], sigma1)
 bar_plot(which_mins_s2[2, ], sigma2)
 bar_plot(which_mins_s4[2, ], sigma4)
 ```
+
+**Graph 2.2 - Fitted models with lowest RMSE**
 
 The table below presents the exact proportion of `simulations` in which `model 6` (our true known model) is getting the lowest `RMSE`.
 
@@ -346,8 +356,9 @@ gen_kable(rmse_sel, col_names = c("Proportion"),
 
 ```
 
+**Table 2.1 - Correct model selection for each** $\sigma$
 
-Lastly, we notice below that in the case of the `train` data, the smallest RMSE always corresponds to the ` largest model`, in this case the `model` with 9 `predictors`.
+Lastly, we notice below that in the case of the `train data`, the smallest RMSE always corresponds to the `largest model`, in this case the `model` with 9 `predictors`.
 
 ```{r}
 # The values below correspond to the total number of simulations.
@@ -359,3 +370,10 @@ sum(which_mins_s4[1, ] == 9)
 
 
 ## Discussion
+
+**The method of lowest RMSE does not select the true model always**
+
+From `Table 2.1` we can see that the proportion of times we selected `model 6` is not `1`, meaning that in the experiment we are not always selecting the `true model`. For instance, for $\sigma = 1$ we select it only for `r (mean(which_mins_s1[2, ] == 6) * 100)`% of the `r num_sims` simulations.
+
+Furthermore, from `Graph 2.2` we can see other models getting the lowest `RMSE` for different values of $\sigma$. Notably, the models around the 
+

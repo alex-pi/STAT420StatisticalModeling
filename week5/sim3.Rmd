@@ -80,6 +80,8 @@ For each possible $\beta_1$ and $\sigma$ combination, we will simulate from the 
 
 ## Methods
 
+Let's start pre-allocating the variables we will need during the simulation.
+
 ```{r}
 birthday <- 19820426
 set.seed(birthday)
@@ -87,36 +89,49 @@ set.seed(birthday)
 alpha <- 0.05
 num_sims <- 1000 
 sigmas <- c(1, 2, 4)
+# The 3 different sizes for the observations.
 n_obs <- c(10, 20, 30)
+# A sequence to get the beta_1 values.
 betas_1 <- seq(-2, 2, 0.1)
+
+# Contains our 3 sets of x values (1 predictor only)
 x_values <- list(seq(0, 5, length = n_obs[1])
              ,seq(0, 5, length = n_obs[2])
              ,seq(0, 5, length = n_obs[3])
              #,seq(0, 5, length = n_obs[4])
              )
 
+# a matrix where each (i,j) is a boolean with the result of significance test for
+# the simulation_i and the x_values_j data set.
 significance_results <- matrix(0, num_sims, length(x_values))
+
 # a matrix where each (i,j) is the power of a beta_i given a x_values_j.
 betas_by_powers <- matrix(0, length(betas_1), length(x_values))
 
-results_by_sigma <- vector(mode = "list", length = length(sigmas))
-
 ```
+
+The following function returns the `p-value` for the `Significance of Regression`. In other words the `p-value` to test Hypothesis:
+
+$$H_0: \beta_{1} = 0 \ \text{vs} \ H_1: \beta_{1} \neq 0$$
+
+The functions below fit a SLR model and extract the `p-value` we will use for testing the `Siginificance of the Regression`.
 
 ```{r}
 
-sim_slr <- function(x, beta_0 = 0, beta_1, sigma = 1) {
+sim_slr <- function(x, beta_0 = 0, beta_1, sigma) {
   n <- length(x)
   epsilon <- rnorm(n = n, mean = 0, sd = sigma)
   y <- beta_0 + beta_1 * x + epsilon
-  sim_model <- lm(y ~ x)
-  #print(summary(sim_model)$coef["x", "Pr(>|t|)"])
-  summary(sim_model)$coef["x", "Pr(>|t|)"]
+  lm(y ~ x)
+}
+
+get_p_val <- function(model) {
+  summary(model)$coef["x", "Pr(>|t|)"]
 }
 
 ```
 
-Create three plots, one for each value of $\sigma$. Within each of these plots, add a “power curve” for each value of $n$ that shows how power is affected by signal strength, $\beta_1$.
+Now we can execute the experiment for each of our 3 $\sigma$ values. Notably, we need to keep count of the `Rejections` to calculate the power after every `r num_sims` simulations.
 
 ```{r}
 
@@ -127,7 +142,16 @@ run_simulation <- function(sigma) {
     bi <- betas_1[bidx]
     for (si in 1:num_sims) {             
       
-      p_values <- sapply(x_values, sim_slr, beta_1=bi, sigma=sigma)
+      # Fit a model for each set of observations.
+      model_n10 <- sim_slr(x_values[[1]], beta_1=bi, sigma=sigma)
+      model_n20 <- sim_slr(x_values[[2]], beta_1=bi, sigma=sigma)
+      model_n30 <- sim_slr(x_values[[3]], beta_1=bi, sigma=sigma)
+      p_values <- c(get_p_val(model_n10)
+                    ,get_p_val(model_n20)
+                    ,get_p_val(model_n30)
+                    )
+      
+      # Store the test results for the ith simulation
       significance_results[si, ] <- (p_values < alpha)
       if(do_prints) {
         print(paste("beta_1=",bi,",sigma=", sigma, ",n_obs=",n_obs))
@@ -136,7 +160,9 @@ run_simulation <- function(sigma) {
         print("************************************")
       }
     }
+    # When simulations are finished for a beta, calculate the power
     powers <- colSums(significance_results) / num_sims
+    # Store the powers for the ith beta
     betas_by_powers[bidx, ] <- powers
   }
   betas_by_powers
@@ -151,16 +177,23 @@ results_sigma4 <- run_simulation(sigmas[3])
 
 ## Results
 
+From our simulation, we are interest in observing how the `Power` changes for the follow factors:
+
+- Values of $\beta_1$
+- Values of $\sigma$ 
+
+
 ```{r}
-power_plot <- function(x, y1, y2, y3, sigma, title) {
+power_plot <- function(x, y1, y2, y3, sigma, title="Power Vs beta_1") {
   plot(x, y1,
-       xlab = "beta_1 values", 
+       xlab = beta[1] ~ " values", 
        ylab = paste("Signal Power (", num_sims, "simulations )"),
        main = paste(title," ( sigma =", sigma,")"),     
        col = "darkorange",
        lwd=2.5,
        lty=2,
-       col.main='blue',
+       #col.main='blue',
+       ylim= c(0,1),
        type='o')
   
   lines(x, y2,
@@ -185,33 +218,84 @@ power_plot <- function(x, y1, y2, y3, sigma, title) {
 }
 ```
 
-
-```{r fig.height = 10, fig.width = 10, fig.align = "center"}}
+```{r fig.height = 6, fig.width = 9, fig.align = "center"}
 par(mfrow=c(1, 1), bg="ghostwhite")
 power_plot(betas_1, 
            results_sigma1[ , 1],
            results_sigma1[ , 2],
            results_sigma1[ , 3],
-           sigmas[1], "beta_1 Power")
+           sigmas[1])
 ```
 
-```{r fig.height = 10, fig.width = 10, fig.align = "center"}}
+**Graph 3.1 - Power as a function of** $\beta_1$ **for 3 data sets**, $\sigma=1$
+
+```{r fig.height = 6, fig.width = 9, fig.align = "center"}
 par(mfrow=c(1, 1), bg="ghostwhite")
 power_plot(betas_1, 
            results_sigma2[ , 1],
            results_sigma2[ , 2],
            results_sigma2[ , 3],
-           sigmas[2], "beta_1 Power")
+           sigmas[2])
 ```
 
-```{r fig.height = 10, fig.width = 10, fig.align = "center"}}
+**Graph 3.2 - Power as a function of** $\beta_1$ **for 3 data sets**, $\sigma=2$
+
+```{r fig.height = 6, fig.width = 9, fig.align = "center"}
 par(mfrow=c(1, 1), bg="ghostwhite")
 power_plot(betas_1, 
            results_sigma4[ , 1],
            results_sigma4[ , 2],
            results_sigma4[ , 3],
-           sigmas[3], "beta_1 Power")
+           sigmas[3])
 ```
+
+**Graph 3.3 - Power as a function of** $\beta_1$ **for 3 data sets**, $\sigma=4$
+
+## Discussion
+
+In the 3 graphs above we can notice a few things in common:
+
+- As $\beta_1$ approaches 0 the `Power` also approaches 0.
+
+We interpret this as increasing the probability of making `Type II` errors as $\beta_1$ gets smaller in magnitude. In other words, it is harder to detect the significance of a predictor if the parameter is small.
+
+This is expected if we consider that with small values of $\beta_1$ and a fixed value of $sigma$ and degrees of freedom, it's likely to get small values for the `F statistic`, recall that for SLR we define it as:
+
+$$F = \frac{\sum_{i=1}^{n}(\hat{y}_i - \bar{y})^2 / 1}{\sum_{i=1}^{n}(y_i - \hat{y}_i)^2 / (n - 2)}$$
+In a simpler way, the smaller $\beta_1$ is the more likely we will `Fail to Reject the Null Hypothesis`, thus, the related predictor $x_i$ seems to have less and less significance.
+
+- With a larger number of observations the `Power` is more stable even if $\beta_1$ gets smaller or we introduce more noise to the simulation.
+
+This is an interesting point where is clear that having more observations help us to make less errors. If we for instance consider `Graph 3.1`, the `Power Curve for 30 observations` (in purple) stays more stable as $\beta_1$ gets smaller.
+
+We can see the same pattern repeating for `Graphs 3.2 and 3.3`.
+
+Back to the formula to calculate `F`, when $n-2$ is larger (n being the number of observations) the `F` value would be larger.
+
+- The `Power Curves` drop faster when $\sigma$ is larger.
+
+A larger $\sigma$ introduces more uncertainty to the model so we are less confident of the model estimates. We are then making more `Type II` errors and having less Rejections of the `Null Hypothesis`.
+
+`Graph 3.1` and `Graph 3.3` are an interesting contrast where is clear how the noise in the system can make easier or harder to detect a signal.
+
+It is also interesting to think on these `Power Curves` as an upside down version of the `Normal Curves` for $\epsilon$.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
