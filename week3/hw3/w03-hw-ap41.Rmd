@@ -517,7 +517,7 @@ sim_stats <- loop_simulation(x, beta_0, beta_1, num_simulations = 2500, sigma = 
 
 ```{r}
 crit <- qt(0.025, df = n - 2, lower.tail = FALSE)
-margin <- crit * sim_stats$beta_1_hats_se
+margin <- crit * sim_stats$beta_1_hats_se # Forgot to divide by Sxx
 lower_95 <- sim_stats$beta_1_hats - margin
 upper_95 <- sim_stats$beta_1_hats + margin
 

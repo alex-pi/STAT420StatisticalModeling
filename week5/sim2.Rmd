@@ -138,11 +138,11 @@ birthday = 19820426
 set.seed(birthday)
 ```
 
-We start by defining a few functions to help with the overall simulation. Namely with the tasks:
+We start by defining a few functions to help with the overall simulation. Namely, to help us with the tasks:
 
-- Calculate the RMSE.
+- Calculate the `RMSE`.
 - Generate simulation data.
-- Get the RMSE values and minimum values for each of the `9` models.
+- Get the `RMSE` values and minimum values for each of the `9` models.
 
 ```{r}
 rmse <- function(expected, predicted) {
@@ -154,16 +154,17 @@ rmse <- function(expected, predicted) {
 # and the known model with 6 predictors.
 simulate_data <- function(X, betas, sigma) {
   n <- nrow(X)
-  #print(X[, 2:7])
   epsilon <- rnorm(n = n, mean = 0, sd = sigma)
   X_full <- as.matrix(cbind(1, X[, 2:7]))
   X$y <- (X_full %*% betas) + epsilon
   as.data.frame(X)
 }
 
-# This function calculates the RMSE for train an test data as well
-# as the index of the minimum RMSE on each case.
+# For each of the 9 models, this function calculates the RMSE 
+# for train an test data as well as the index of the minimum RMSE on each case.
 collect_rmse <- function(trn_data, tst_data) {
+  # row 1 contains rmse values for train data on the 9 models
+  # row 2 contains rmse values for test data on the 9 models
   rmse_matrix <- matrix(-1, 2, 9)
 
   for(im in 1:9) {
@@ -179,7 +180,7 @@ collect_rmse <- function(trn_data, tst_data) {
   }
   list(
     rmse_matrix = rmse_matrix,
-    # The index tell use the model number with the smallest RMSE
+    # The index indicates the model number with the smallest RMSE
     trn_min_idx = which.min(rmse_matrix[1, ]),
     tst_min_idx = which.min(rmse_matrix[2, ])
     )
@@ -200,6 +201,8 @@ rmse_s1_acc <- matrix(0, 2, 9)
 rmse_s2_acc <- matrix(0, 2, 9)
 rmse_s4_acc <- matrix(0, 2, 9)
 
+# For each simulation we save the index of the model with the smallest RMSE
+# We do that for both train and test data and each sigma
 which_mins_s1 <- matrix(0, 2, num_sims)
 which_mins_s2 <- matrix(0, 2, num_sims)
 which_mins_s4 <- matrix(0, 2, num_sims)
@@ -217,7 +220,7 @@ Then for each model, we calculate Train and Test RMSE.
 
 for(i in 1:num_sims) {
 
-  # We simulate the data for the known model (with 7 betas).
+  # We simulate the data for the true model (with 7 betas).
   # For each sigma we get a different data set.
   data_sigma1 <- simulate_data(study2_data, betas, sigma1)
   data_sigma2 <- simulate_data(study2_data, betas, sigma2)
@@ -226,7 +229,6 @@ for(i in 1:num_sims) {
   # Get 250 random indexes for observations
   idxs <- 1:nrow(study2_data)
   trn_idx = sample(idxs, 250)
-  #print(trn_idx)
   
   # Training splits for each sigma
   data_sigma1_trn <- data_sigma1[trn_idx, ]
@@ -250,7 +252,7 @@ for(i in 1:num_sims) {
   rmse_s2_acc <- rmse_s2_acc + rmse_sigma2$rmse_matrix
   rmse_s4_acc <- rmse_s4_acc + rmse_sigma4$rmse_matrix
   
-  # Allocate the index of the minimum RMSE for test/train and each sigma
+  # Save the index of the minimum RMSE for test/train and each sigma
   which_mins_s1[1, i] <- rmse_sigma1$trn_min_idx
   which_mins_s1[2, i] <- rmse_sigma1$tst_min_idx
   
@@ -271,7 +273,7 @@ for(i in 1:num_sims) {
 In this section we use a few graphs to summarize the results obtained in the simulations. The functions below will help us to:
 
 - Plot the `Average RMSE` for `test` and `train` splits for each proposed `sigma`.
-- Create a bar plot to show how many times a model got the lowest `RMSE`.
+- Create a bar plot to show how many times each model got the lowest `RMSE`.
 
 ```{r}
 line_plot <- function(y1, y2, sigma, title, show_ylab = FALSE) {
@@ -279,23 +281,23 @@ line_plot <- function(y1, y2, sigma, title, show_ylab = FALSE) {
   plot(1:9, y1,
        xlab = "Model size (number of predictors)", 
        ylab = ylab,
-       main = paste(title," ( sigma =", sigma,")"),     
+       #main = paste(title," ( sigma =", sigma,")"),     
+       main = bquote(.(title) ~ " (" ~ sigma ~ "=" ~ .(sigma) ~ ")"),
        col = "darkorange",
        lwd=2.5,
        lty=2,
-       col.main='blue',
        type='o')
   
   lines(1:9,y2,
         lwd=2.5,
-        lty=3,        
-        col='cadetblue3',
+        lty=2,        
+        col='forestgreen',
         type='o')
   
-  legend("topright", c("Train", "Test"), 
-       lty = c(2, 3),
+  legend("topright", c("Train Data", "Test Data"), 
+       lty = c(2, 2),
        lwd = 3,
-       col = c("darkorange", "cadetblue3"))  
+       col = c("darkorange", "forestgreen"))  
 }
 
 bar_plot <- function(data, sigma) {
@@ -315,7 +317,7 @@ bar_plot <- function(data, sigma) {
 
 
 
-We are interested in observing how the RMSE changes depending on the `number of predictors` or `model size`. We plot that for each of our `sigma` values.
+We are interested in observing how the `RMSE` changes depending on the `number of predictors` or `model size`. We plot that for each of our `sigma` values.
 
 ```{r fig.height = 6, fig.width = 10, fig.align = "center"}
 par(mfrow=c(1, 3), bg="ghostwhite")
@@ -358,22 +360,38 @@ gen_kable(rmse_sel, col_names = c("Proportion"),
 
 **Table 2.1 - Correct model selection for each** $\sigma$
 
-Lastly, we notice below that in the case of the `train data`, the smallest RMSE always corresponds to the `largest model`, in this case the `model` with 9 `predictors`.
+Lastly, we notice below that in the case of the `train data`, the smallest `RMSE` always corresponds to the `largest model`, in this case the `model` with 9 `predictors`.
 
 ```{r}
 # The values below correspond to the total number of simulations.
-sum(which_mins_s1[1, ] == 9)
-sum(which_mins_s2[1, ] == 9)
-sum(which_mins_s4[1, ] == 9)
+c(sum(which_mins_s1[1, ] == 9),
+  sum(which_mins_s2[1, ] == 9),
+  sum(which_mins_s4[1, ] == 9))
 
 ```
 
 
 ## Discussion
 
-**The method of lowest RMSE does not select the true model always**
+**The method of lowest RMSE does not always select the true model**
 
 From `Table 2.1` we can see that the proportion of times we selected `model 6` is not `1`, meaning that in the experiment we are not always selecting the `true model`. For instance, for $\sigma = 1$ we select it only for `r (mean(which_mins_s1[2, ] == 6) * 100)`% of the `r num_sims` simulations.
 
-Furthermore, from `Graph 2.2` we can see other models getting the lowest `RMSE` for different values of $\sigma$. Notably, the models around the 
+Furthermore, from `Graph 2.2` we can see other models getting the lowest `RMSE` for different values of $\sigma$. Notably, the models close to the `true model` get sometimes the smallest `RMSE`.
+
+`Graph 2.1` shows an important detail, the `Avg RMSE` seems to reach a minimum for `model 6` (the `true model`), after that, it tends to go slightly up. So we can state that in average the lowest `RMSE` will correspond to the `true model`.
+
+**The level of noise affects the RMSE values**
+
+Recall that the `RMSE` depends on the `Sum of Squared Error` which represents the unexplained variation of $y$. By introducing more noise (i.e. a larger $\sigma$) we are less confident of our estimates for $\hat{y}_i$, this increases the distance between our estimates and the true value of $y$. So the term $y_i - \hat{y}_i$ becomes bigger causing a bigger `RMSE` value.
+
+$$
+\text{RMSE}(\text{model, data}) = \sqrt{\frac{1}{n} \sum_{i = 1}^{n}(y_i - \hat{y}_i)^2}
+$$
+
+From `Graph 2.1` we can see that the `Average RMSE` increases as we increase the $\sigma$ value. This is true for both `Train` and `Test` data.
+
+Furthermore, more noise can also affect the selection of the `true model`. By looking at `Graph 2.2` we can see that as $\sigma$ increases, other models get selected more frequently.
+
+Lastly, from `Graph 2.1` we can see that the Average `RMSE` for the `train data` only goes lower the more predictors are in the model, this a similar but opposite effect as the one observed for $R^2$, where it increases as more predictors are added to the model.
 

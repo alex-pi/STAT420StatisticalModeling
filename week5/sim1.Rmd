@@ -1,6 +1,6 @@
 ---
 title: 'Week 6 - Midterm Assignment: A Simulation Project'
-author: "STAT 420, Summer 2021,Alejandro Pimentel (ap41)"
+author: "STAT 420, Summer 2021, Alejandro Pimentel (ap41)"
 date: ''
 output:
   html_document: 
@@ -17,6 +17,56 @@ editor_options:
 p, li, td {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
+```
+
+```{r message=FALSE, warning=FALSE, class.source = 'fold-hide'}
+library(knitr)
+library(kableExtra)
+library(dplyr)
+
+format_numerics <- function(data, digits = 2, notation_threshold = 0.00001) {
+  # make sure is a data.frame, then format
+  if(!is.data.frame(data)){
+    data <- as.data.frame(data)
+  }  
+  data %>% 
+    mutate_if(
+      is.numeric, 
+      function(x) {
+        if_else(
+          abs(x) < notation_threshold, 
+          formatC(x, digits = digits, format = "e"), 
+          formatC(x, digits = digits, format = "f", drop0trailing = FALSE)
+        )
+      }
+    )
+}
+
+gen_kable <- function(table_data, add_row_names = TRUE, caption = "", col_names = c(), row_names = c()) {
+  f_data <- format_numerics(table_data) 
+  if(length(col_names) != 0){
+    colnames(f_data) <- col_names
+  }
+  if(length(row_names) != 0){
+    rownames(f_data) <- row_names
+  }  
+  f_data %>%
+  kable(., format = "html", row.names = add_row_names,
+        caption = caption, escape = FALSE) %>%
+    kable_styling(bootstrap_options = c("striped", "hover"),
+                  full_width = F,
+                  font_size = 14,
+                  position = "center")
+}
+
+fr <- function(nums, digits = 5, notation_threshold = 0.000001) {
+  if_else(
+    abs(nums) < notation_threshold, 
+    formatC(nums, digits = digits, format = "e"), 
+    format(round(nums, digits), nsmall = digits)
+  )
+}
+
 ```
 
 # Simulation Study 1: Significance of Regression
@@ -57,6 +107,16 @@ For both, we will consider a sample size of $25$ and three possible levels of no
 - $n = 25$
 - $\sigma \in (1, 5, 10)$
 
+Using simulation we will obtain an empirical distribution for each of the following values, for each of the three values of $\sigma$, for both models.
+
+- The **$F$ statistic** for the significance of regression test.
+- The **p-value** for the significance of regression test
+- **$R^2$**
+
+For each model and $\sigma$ combination, we use $2000$ simulations. For each simulation, we fit a regression model of the same form used to perform the simulation.
+
+The data found in [`study_1.csv`](study_1.csv) has the values of the predictors. These is kept constant for the entirety of this study. The `y` values in this data are a blank placeholder.
+
 ## Methods
 
 Read the `csv` file with our samples and take a look to some of them.
@@ -75,56 +135,7 @@ birthday = 19820426
 set.seed(birthday)
 ```
 
-For the simulations we need to define a few functions.
-
-First, a function to generate the responses $y$. For which we need:
-
-- A matrix with the predictors values.
-- A matrix of `p` by 1 where `p` is the number of parameters `beta` in the model.
-- A `sigma` to generate noise ($\epsilon$) to the response.
-
-The output is a data frame with all predictors and `y` values added.
-
-```{r}
-generate_mlr_data <- function(X, betas, sigma = 1) {
-  n <- nrow(X)
-  epsilon <- rnorm(n = n, mean = 0, sd = sigma)
-  X_full <- as.matrix(cbind(1, X))
-  X$y <- (X_full %*% betas) + epsilon
-  as.data.frame(X)
-}
-
-```
-
-Next, we need a function that runs a number of simulations with a fixed $\beta_i$ values and `sigma`. For each `fitted model` the function extracts:
-
-- The **$F$ statistic** for the significance of regression test.
-- The **p-value** for the significance of regression test
-- **$R^2$**
-
-```{r}
-loop_simulation <- function (X, betas, num_simulations = 2000, sigma = 1) {
-  fstats <- rep(0, num_simulations)
-  pvals <- rep(0, num_simulations)
-  r2s <- rep(0, num_simulations)
-  for (i in 1:num_simulations) {
-    sim_data <- generate_mlr_data(X, matrix(betas), sigma)
-    sim_model <- lm(y ~ ., data = sim_data)
-    ft <- unname(summary(sim_model)$fstatistic)
-    fstats[i] <- ft[1]
-    pvals[i] <- 1 - pf(ft[1], df1 = ft[2], df2 = ft[3])
-    r2s[i] <- summary(sim_model)$r.squared
-  }
-  list(
-    fstats = fstats,
-    pvals = pvals,
-    r2s = r2s
-    )
-}
-
-```
-
-We are set to run the 6 simulations, the code below does it.
+First, let's define some constant values for our simulation.
 
 ```{r}
 # Only take the predictor columns x_i
@@ -137,8 +148,65 @@ nosig_betas <- c(3, 0, 0, 0)
 sigma_1 <- 1
 sigma_5 <- 5
 sigma_10 <- 10
+num_sims <- 2000
 
-num_sims <- 200
+# The degrees of freedom provided we know we have 4 parameters in both models
+df1 <- length(sig_betas) - 1
+df2 <- nrow(study1_data) - length(sig_betas)
+```
+
+For the simulations we need to define a few functions.
+
+First, a function to generate the responses $y$. For which we need:
+
+- A matrix with the predictors values.
+- A matrix of `p` by 1 where `p` is the number of parameters $\beta$ in the model.
+- A `sigma` to generate noise ($\epsilon$) for the response $y$.
+
+The output is a `data frame` with all predictors and $y$ values added.
+
+```{r}
+generate_mlr_data <- function(X, betas, sigma = 1) {
+  n <- nrow(X)
+  epsilon <- rnorm(n = n, mean = 0, sd = sigma)
+  X_full <- as.matrix(cbind(1, X))
+  X$y <- (X_full %*% betas) + epsilon
+  as.data.frame(X)
+}
+
+```
+
+Next, we need a function that runs a number of simulations with fixed $\beta_i$ values and $\sigma$. For each `fitted model` the function extracts:
+
+- The **$F$ statistic** for the significance of regression test.
+- The **p-value** for the significance of regression test.
+- **$R^2$**
+
+```{r}
+loop_simulation <- function (X, betas, num_simulations = 2000, sigma = 1) {
+  fstats <- rep(0, num_simulations)
+  pvals <- rep(0, num_simulations)
+  r2s <- rep(0, num_simulations)
+  for (i in 1:num_simulations) {
+    sim_data <- generate_mlr_data(X, matrix(betas), sigma)
+    sim_model <- lm(y ~ ., data = sim_data)
+    ft <- unname(summary(sim_model)$fstatistic)
+    fstats[i] <- ft[1]
+    pvals[i] <- 1 - pf(abs(ft[1]), df1 = ft[2], df2 = ft[3])
+    r2s[i] <- summary(sim_model)$r.squared
+  }
+  list(
+    fstats = fstats,
+    pvals = pvals,
+    r2s = r2s
+    )
+}
+
+```
+
+We are set to run the 6 simulations, the code below does that for each model and $\sigma$.
+
+```{r}
 
 # Simulations for the significant model 
 signif_1 <- loop_simulation(X, sig_betas, num_simulations = num_sims, sigma_1)
@@ -156,24 +224,37 @@ nosignif_10 <- loop_simulation(X, nosig_betas, num_simulations = num_sims, sigma
 
 Here we present a collection of graph to analyze the simulation results. To keep things DRY I define a function that shows:
 
-- A histogram of the `f statistic` values obtained in the simulation.
-- The `true` curve of the distribution given the degrees of freedom in our model (when the distribution is known).
+- A `histogram` of the empirical values obtained in the simulation.
+- The `true` curve of the distribution (when the distribution is known).
 
 ```{r}
-graph_helper <- function(simuldata, sigma, dist_curve = "", color, title) {
-  hist(simuldata, probability = TRUE, breaks = 15,
-     xlab = title, 
-     main = paste(title," ( sigma =", sigma,")"), 
-     col = color,
-     border = "aliceblue")
-
+graph_helper <- function(simuldata, sigma, dist_curve = "", 
+                         color, title, auto_xlim = TRUE) {
+  # TODO change to ggplot as it seems like conditionally
+  # setting properties is easier and idiomatic.
+  if(auto_xlim) {
+    hist(simuldata, probability = TRUE, breaks = 15,
+       xlab = title, 
+       main = paste(title," ( sigma =", sigma,")"), 
+       col = color,
+       border = "aliceblue")
+  } else {
+    hist(simuldata, probability = TRUE, breaks = 15,
+       xlab = title, 
+       xlim = c(-1, max(simuldata)),
+       main = paste(title," ( sigma =", sigma,")"), 
+       col = color,
+       border = "aliceblue")    
+  }
+  # The curve for F distribution
   if(dist_curve == "f") {
-    curve(df(x, df1 = 4 - 1, df2 = 25 - 4),
+    curve(df(x, df1 = df1, df2 = df2),
         col = "darkorange", 
         add = TRUE, lwd = 3
         )
   }
   
+  # The curve of a uniform distribution
   if(dist_curve == "unif") {
     curve(dunif(x),
       col = "darkorange", 
@@ -181,8 +262,9 @@ graph_helper <- function(simuldata, sigma, dist_curve = "", color, title) {
       )
   }
   
+  # Labels needed when showing more than one curve/hist
   if(dist_curve != "") {
-    legend("topright", c("Simulated", "Real"), 
+    legend("topright", c("Empirical", "Real"), 
          lty = c(1, 2),
          lwd = 3,
          col = c(color, "darkorange"))
@@ -191,66 +273,129 @@ graph_helper <- function(simuldata, sigma, dist_curve = "", color, title) {
 
 ```
 
-**Graph 1.1 - F Statistics for the `significant model` on each $\sigma$**
+
+**We use color blue to show the empirical distributions of the `significant model`. Gray corresponds to the `non-significant model`.**
+
+### Set of graphs for F-statistic distributions
 
 ```{r fig.height = 6, fig.width = 10, fig.align = "center"}
 par(mfrow=c(1, 3), bg="ghostwhite")
-title <- "1.1 F Statistic Distribution"
-graph_helper(signif_1$fstats, sigma_1, "f", color = "deepskyblue3", title)
+title <- "F Statistic Distribution"
+graph_helper(signif_1$fstats, sigma_1, "f", color = "deepskyblue3", title, 
+             auto_xlim = FALSE)
 graph_helper(signif_5$fstats, sigma_5, "f", color = "deepskyblue3", title)
 graph_helper(signif_10$fstats, sigma_10, "f", color = "deepskyblue3", title)
 ```
 
-**Graph 1.2 - F Statistics for the `non-significant model` on each $\sigma$**
+**Graph 1.1 - F Statistics for the `significant model` on each $\sigma$**
 
 ```{r fig.height = 6, fig.width = 10, fig.align = "center"}
 par(mfrow=c(1, 3), bg="ghostwhite")
-title <- "1.2 F Statistic Distribution"
+title <- "F Statistic Distribution"
 graph_helper(nosignif_1$fstats, sigma_1, "f", color = "darkgray", title)
 graph_helper(nosignif_5$fstats, sigma_5, "f", color = "darkgray", title)
 graph_helper(nosignif_10$fstats, sigma_10, "f", color = "darkgray", title)
 ```
 
-**Graph 2.1 - p-values for the `significant model` on each $\sigma$**
+**Graph 1.2 - F Statistics for the `non-significant model` on each $\sigma$**
+
+### Set of graphs for p-value distributions
 
 ```{r fig.height = 6, fig.width = 10, fig.align = "center"}
 par(mfrow=c(1, 3), bg="ghostwhite")
-title <- "2.1 p-values Distribution"
+title <- "p-values Distribution"
 graph_helper(signif_1$pvals, sigma_1, "unif", color = "deepskyblue3", title)
 graph_helper(signif_5$pvals, sigma_5, "unif", color = "deepskyblue3", title)
 graph_helper(signif_10$pvals, sigma_10, "unif", color = "deepskyblue3", title)
 
 ```
 
-**Graph 2.2 - p-values for the `non-significant model` on each $\sigma$**
+**Graph 1.3 - p-values for the `significant model` on each $\sigma$**
 
 ```{r fig.height = 6, fig.width = 10, fig.align = "center"}
 par(mfrow=c(1, 3), bg="ghostwhite")
-title <- "2.2 p-values Distribution"
+title <- "p-values Distribution"
 graph_helper(nosignif_1$pvals, sigma_1, "unif", color = "darkgray", title)
 graph_helper(nosignif_5$pvals, sigma_5, "unif", color = "darkgray", title)
 graph_helper(nosignif_10$pvals, sigma_10, "unif", color = "darkgray", title)
 ```
 
-**Graph 3.1 - $R^2$ for the `significant model` on each $\sigma$**
+**Graph 1.4 - p-values for the `non-significant model` on each $\sigma$**
+
+### Set of graphs for $R^2$ distributions
 
 ```{r fig.height = 6, fig.width = 10, fig.align = "center"}
 par(mfrow=c(1, 3), bg="ghostwhite")
-title <- "3.1 R^2 Distribution"
+title <- "R^2 Distribution"
 graph_helper(signif_1$r2s, sigma_1, color = "deepskyblue3", title = title)
 graph_helper(signif_5$r2s, sigma_5, color = "deepskyblue3", title = title)
 graph_helper(signif_10$r2s, sigma_10, color = "deepskyblue3", title = title)
 ```
 
-**Graph 3.2 - $R^2$ for the `non-significant model` on each $\sigma$**
+**Graph 1.5 - $R^2$ for the `significant model` on each $\sigma$**
 
 ```{r fig.height = 6, fig.width = 10, fig.align = "center"}
 par(mfrow=c(1, 3), bg="ghostwhite")
-title <- "3.2 R^2 Distribution"
+title <- "R^2 Distribution"
 graph_helper(nosignif_1$r2s, sigma_1, color = "darkgray", title = title)
 graph_helper(nosignif_5$r2s, sigma_5, color = "darkgray", title = title)
 graph_helper(nosignif_10$r2s, sigma_10, color = "darkgray", title = title)
 ```
 
+**Graph 1.6 - $R^2$ for the `non-significant model` on each $\sigma$**
 
 ## Discussion
+
+**We expect empirical F-values to follow an F distribution under $H_0$.**
+
+In this case the F-distribution has `r df1` and `r df2` degrees of freedom, we can see in the curve in orange for graphs `1.1` (`significant mode`l) and `1.2` (`non-significant model`).
+
+Also, in the case of the `significant model`, when the noise is low ($\sigma=1$), the F-values from the simulation are relatively high moving away from the real curve. This translates to lower `p-values` and more successful `Rejections of the Null Hypothesis` which is what we expected since we know $\beta_i \neq 0$.
+
+As $\sigma$ increases, the F-values become smaller and the empirical distribution resembles the the real curve more and more. This makes more likely to `Fail to Reject the Null Hypothesis`.
+
+In the case of the `non-significant model`, we expect to `Fail to Reject the Null Hypothesis` as much as we can, since we know $\beta_i = 0$. Regardless of the level of noise, the empirical distribution is close to the real curve (`Graph 1.2`).
+
+**We expect the p-values to follow a uniform distribution under $H_0$.**
+
+From `Graph 1.4` (`non-significant model`) we see the empirical distribution follows a `uniform distribution`, this is expected as in this case we know we should `Fail To Reject the Null Hypothesis`. So for any reasonable $\alpha$, it is likely that $\text{p-value} > \alpha$
+
+As we observed for the F-values, we have a similar relation between the p-values distribution and the amount of noise $\sigma$. For the `significant model` when $\sigma=1$ we expect many small p-values so that is more likely to `Reject the null Hypothesis`. That is in fact the case in the first plot in `Graph 1.3`, there is a localized high density of very small p-values.
+
+The following table summarizes the previous idea (given $\alpha=0.05$):
+
+- For the significant model the ratio of *Rejections of $H_0$* depends on $\sigma$.
+- While for the non-significant model we observed a very small ratio of *Rejections of $H_0$*.
+
+```{r}
+
+rejections <- data.frame(
+  row.names = c("sigma=1", "sigma=5", "sigma=10"),
+  "significant model" = c(mean(signif_1$pvals < 0.05),
+                                       mean(signif_5$pvals < 0.05),
+                                       mean(signif_10$pvals < 0.05)),
+  "non-significant model" = c(mean(nosignif_1$pvals < 0.05),
+                                              mean(nosignif_5$pvals < 0.05),
+                                              mean(nosignif_10$pvals < 0.05))
+)
+
+gen_kable(rejections, 
+          col_names = c("significant model", "non-significant model"),
+          caption = "Proportion of Rejections of the Null Hypothesis, alpha=0.05")
+
+```
+
+**For the significant model, $R^2$ tends to be lower as $\sigma$ increases.**
+
+Recall that the `Coefficient of Determination` $R^2$ is defined as:
+
+\begin{aligned}
+R^2 &= \frac{\text{SSReg}}{\text{SST}} = \frac{\sum_{i=1}^{n}(\hat{y}_i - \bar{y})^2}{\sum_{i=1}^{n}(y_i - \bar{y})^2} 
+\end{aligned}
+
+Our estimates $\hat{y}_i$ are likely farther from the real mean of the response $\bar{y}$ as we introduce more noise. That is, `SSReg` is smaller resulting in an also smaller $R^2$ value.
+
+`Graph 1.5` (`significant model`) shows how $R^2$ distribution goes from left skewed to right skewed. We say then that the amount of variation explained by the regression model is reduced as we introduce more noise $\epsilon$.
+
+In the case of the `non-significant model` we expect low $R^2$ values regardless of the level of noise. In other words, the non-significant model is not explaining the variation of the response as expected since we know $\beta_i = 0$. `Graph 1.6` shows only right skewed distributions due to low values of $R^2$ for all $\sigma$ values.
+

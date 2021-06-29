@@ -94,11 +94,10 @@ n_obs <- c(10, 20, 30)
 # A sequence to get the beta_1 values.
 betas_1 <- seq(-2, 2, 0.1)
 
-# Contains our 3 sets of x values (1 predictor only)
+# Contains our 3 sets of x values (with 1 predictor only)
 x_values <- list(seq(0, 5, length = n_obs[1])
              ,seq(0, 5, length = n_obs[2])
              ,seq(0, 5, length = n_obs[3])
-             #,seq(0, 5, length = n_obs[4])
              )
 
 # a matrix where each (i,j) is a boolean with the result of significance test for
@@ -114,10 +113,9 @@ The following function returns the `p-value` for the `Significance of Regression
 
 $$H_0: \beta_{1} = 0 \ \text{vs} \ H_1: \beta_{1} \neq 0$$
 
-The functions below fit a SLR model and extract the `p-value` we will use for testing the `Siginificance of the Regression`.
-
 ```{r}
 
+# Fit a SLR model
 sim_slr <- function(x, beta_0 = 0, beta_1, sigma) {
   n <- length(x)
   epsilon <- rnorm(n = n, mean = 0, sd = sigma)
@@ -125,6 +123,8 @@ sim_slr <- function(x, beta_0 = 0, beta_1, sigma) {
   lm(y ~ x)
 }
 
+# Extract the `p-value` we will use for testing the 
+# Siginificance of the Regression test.
 get_p_val <- function(model) {
   summary(model)$coef["x", "Pr(>|t|)"]
 }
@@ -177,10 +177,11 @@ results_sigma4 <- run_simulation(sigmas[3])
 
 ## Results
 
-From our simulation, we are interest in observing how the `Power` changes for the follow factors:
+From our simulation, we are interest in observing how the `Power` changes for the following factors:
 
 - Values of $\beta_1$
 - Values of $\sigma$ 
+- The number of observations $n$
 
 
 ```{r}
@@ -192,7 +193,6 @@ power_plot <- function(x, y1, y2, y3, sigma, title="Power Vs beta_1") {
        col = "darkorange",
        lwd=2.5,
        lty=2,
-       #col.main='blue',
        ylim= c(0,1),
        type='o')
   
@@ -255,24 +255,24 @@ power_plot(betas_1,
 
 In the 3 graphs above we can notice a few things in common:
 
-- As $\beta_1$ approaches 0 the `Power` also approaches 0.
+- **As $\beta_1$ approaches 0 the `Power` also approaches 0.**
 
 We interpret this as increasing the probability of making `Type II` errors as $\beta_1$ gets smaller in magnitude. In other words, it is harder to detect the significance of a predictor if the parameter is small.
 
-This is expected if we consider that with small values of $\beta_1$ and a fixed value of $sigma$ and degrees of freedom, it's likely to get small values for the `F statistic`, recall that for SLR we define it as:
+This is expected if we consider that with small values of $\beta_1$ and a fixed value of $sigma$ and degrees of freedom, it's likely to get small values for the `F statistic`, recall that for `SLR` we define it as:
 
 $$F = \frac{\sum_{i=1}^{n}(\hat{y}_i - \bar{y})^2 / 1}{\sum_{i=1}^{n}(y_i - \hat{y}_i)^2 / (n - 2)}$$
-In a simpler way, the smaller $\beta_1$ is the more likely we will `Fail to Reject the Null Hypothesis`, thus, the related predictor $x_i$ seems to have less and less significance.
+In a simpler way, the smaller $\beta_1$ is the more likely we will `Fail to Reject the Null Hypothesis`, thus, the related predictor $x_1$ seems to have less and less significance.
 
-- With a larger number of observations the `Power` is more stable even if $\beta_1$ gets smaller or we introduce more noise to the simulation.
+- **With a larger number of observations the `Power` is more stable even if $\beta_1$ gets smaller or we introduce more noise to the simulation.**
 
-This is an interesting point where is clear that having more observations help us to make less errors. If we for instance consider `Graph 3.1`, the `Power Curve for 30 observations` (in purple) stays more stable as $\beta_1$ gets smaller.
+This is an interesting point where is clear that having more observations help us to make less errors. If we for instance consider `Graph 3.1`, the `Power Curve for 30 observations` (in purple) stays more stable as $\beta_1$ gets smaller. In other words, having more observations increases the probability of detecting a signal.
 
 We can see the same pattern repeating for `Graphs 3.2 and 3.3`.
 
 Back to the formula to calculate `F`, when $n-2$ is larger (n being the number of observations) the `F` value would be larger.
 
-- The `Power Curves` drop faster when $\sigma$ is larger.
+- **The `Power Curves` drop faster when $\sigma$ is larger.**
 
 A larger $\sigma$ introduces more uncertainty to the model so we are less confident of the model estimates. We are then making more `Type II` errors and having less Rejections of the `Null Hypothesis`.
 
