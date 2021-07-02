@@ -1,0 +1,253 @@
+---
+title: "quiz-week6"
+author: "AP"
+date: "6/30/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Question 1
+
+Consider three models:
+
+- Simple: 
+$$Y = \beta_0 + \beta_1 x_1 + \epsilon$$
+- Additive: 
+$$Y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \epsilon$$
+- Interaction:
+$$Y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \beta_3 x_1 x_2 + \epsilon$$
+
+where
+
+$Y$ is the heart weight of a cat in grams
+$x_1$ is the body weight of a cat in kilograms
+$x_2$ is a dummy variable that takes the value 1 when a cat is male
+
+Use the simple model to estimate the change in average heart weight when body weight is increased by 1 kilogram, for a female cat.
+
+```{r}
+cats <- MASS::cats
+?cats
+
+simple_mod <- lm(Hwt ~ Bwt, data = cats)
+simple_mod$coefficients
+simple_mod$coefficients[2]
+```
+
+# Question 2
+
+Use the interaction model to estimate the change in average heart weight when body weight is increased by 1 kilogram, for a female cat.  
+
+```{r}
+interac_mod <- lm(Hwt ~ Bwt * Sex, data = cats)
+interac_mod$coef
+interac_mod$coef[2]
+
+interac_mod1 <- lm(Hwt ~ 0 + Sex + Bwt:Sex, data = cats)
+interac_mod1$coef
+interac_mod1$coef[3]
+
+```
+
+# Question 3
+
+Use the interaction model to estimate the change in average heart weight when body weight is increased by 1 kilogram, for a male cat. 
+
+```{r}
+interac_mod$coef[2] + interac_mod$coef[4]
+interac_mod1$coef[4]
+
+```
+
+# Question 4
+
+Use the additive model to estimate the difference in the change in average heart weight when body weight is increased by 1 kilogram between a male and female cat.
+
+```{r}
+add_mod <- lm(Hwt ~ Bwt + Sex, data = cats)
+add_mod$coef[3] # wrong
+
+add_mod1 <- lm(Hwt ~ 0 + Bwt + Sex, data = cats)
+add_mod1$coef
+add_mod1$coef[3] - add_mod1$coef[2] # wrong
+
+predict(add_mod, newdata = data.frame(Bwt=c(3,3), Sex=c("F","M")))
+
+predict(add_mod, newdata = data.frame(Bwt=c(4,4), Sex=c("F","M")))
+```
+
+# Question 5
+
+Use an F test to compare the additive and interaction models. Report the value of the F test statistic.  
+
+```{r}
+anova1 <- anova(add_mod, interac_mod)
+anova1[2, "F"]
+
+summary(interac_mod)$coef["Bwt:SexM", "t value"] ^ 2
+```
+
+# Question 6
+
+Carry out the test in Question 5 using $\alpha = 0.05$. Based on this test, which model is preferred?
+
+```{r}
+
+summary(interac_mod)$coef["Bwt:SexM", 4] < 0.05
+# The interactive term is significant... not by much
+```
+
+# Question 7
+
+For Questions 7-13, use the iris dataset which is built into R. Use ?iris to learn about this dataset. (Note that this model would be somewhat odd in practice. Usually it would make sense to predict species from characteristics, or characteristics from species. Here we’re using a combination of characteristics and species to predict other characteristics, for illustrative purposes.)  
+
+```{r}
+iris_add = lm(Sepal.Length ~ Petal.Length + Species, data = iris)
+iris_add
+levels(iris$Species)
+
+predict(iris_add, newdata = data.frame(
+  Species = "versicolor",
+  Petal.Length = 5.1
+))
+
+```
+
+# Question 8
+
+```{r}
+iris_add1 = lm(Sepal.Length ~ 0 + Petal.Length + Species, data = iris)
+iris_add1
+
+(conf <- confint(iris_add, level = 0.9))
+(conf1 <- confint(iris_add1, level = 0.9))
+
+conf["Speciesvirginica", 1]
+```
+
+# Question 9
+
+  Continue to use the model from Question 7. Perform a test that compares this model to one without an effect for species. Report the value of the test statistic for this test.  
+
+```{r}
+summary(iris_add)
+
+iris_slr_mod <- lm(Sepal.Length ~ Petal.Length, data = iris)
+anov <- anova(iris_slr_mod, iris_add)
+anov[2, "F"]
+```
+
+# Question 10
+
+Now consider the model with the interaction given above. Excluding $\sigma^2$
+ , how many parameters does this model have? Stated another way, if written mathematically, how many $\beta$ parameters are in the model?
+ 
+Solution is 6
+
+```{r}
+(iris_int = lm(Sepal.Length ~ Petal.Length * Species, data = iris))
+
+(iris_int_parm = lm(Sepal.Length ~ 0 + Species + Petal.Length:Species, data = iris))
+```
+
+# Question 11
+
+Using the interaction model fit with the given code, create a 99% prediction interval for the sepal length of a versicolor with a petal length of 5.10. Report the upper bound of this interval.
+
+```{r}
+(pred <- predict(iris_int, level = 0.99 ,newdata = data.frame(
+  Species = "versicolor",
+  Petal.Length = 5.1
+), interval = "predict"))
+
+pred[3]
+```
+
+# Question 12
+
+Using the interaction model fit with the given code, obtain an estimate of the change in mean sepal length for a petal length increase of 1 unit, for a versicolor.
+
+```{r}
+
+iris_int_parm$coef[5]
+
+iris_int$coef[2] + iris_int$coef[5]
+
+```
+
+
+# Question 13
+
+Compare the two previous models, the additive and interaction models, using an ANVOA FF test using $\alpha = 0.01$. Based on this test, which model is preferred?
+
+```{r}
+summary(iris_add)$coef
+summary(iris_int)$coef
+
+(anov2 <- anova(iris_add, iris_int))
+
+anov2[2, "Pr(>F)"] < 0.01
+
+```
+
+# Question 14
+
+Fit a multiple linear model with Fertility as the response and Education, Catholic, and Infant.Mortality as predictors. Use the first order terms as well as all two- and three-way interactions.  
+
+  Use this model to estimate the change in mean Fertility for an increase of Education of one unit when Catholic is 90.0 and Infant.Mortality is 20.0. 
+
+
+```{r}
+head(swiss)
+
+(sw_int_mod <- lm(Fertility ~ (Education + Catholic + Infant.Mortality) ^ 3,
+                 data = swiss))
+
+(sw_int_mod_p <- lm(Fertility ~ 0 + (Education * Catholic * Infant.Mortality),
+                 data = swiss))
+
+cof <- summary(sw_int_mod)$coef[, "Estimate"]
+
+(sw_int_mod$coef[2] + (sw_int_mod$coef[5]*90) + (sw_int_mod$coef[6]*20) + (sw_int_mod$coef[8]*90*20))
+
+(cof[2] + (cof[5]*90) + (cof[6]*20) + (cof[8]*90*20))
+
+```
+
+$$
+Y = \beta_0 + \beta_1x_e + \beta_2x_c + \beta_3x_i + \beta_4x_ex_c  + \beta_5x_ex_i + \beta_6x_cx_i + \beta_7x_ex_cx_i + \epsilon
+$$
+$$
+Y = \beta_0 + (\beta_1 + \beta_4x_c + \beta_5x_i + \beta_7x_cx_i)x_e + \beta_2x_c + \beta_3x_i + \beta_6x_cx_i + \epsilon
+$$
+
+
+# Question 15
+
+Test for the significance of the three-way interaction in the model from Question 14. Report the p-value of this test.  
+
+```{r}
+sw_2w_int_mod <- lm(Fertility ~ (Education + Catholic + Infant.Mortality) ^ 2,
+                 data = swiss)
+summary(sw_2w_int_mod)
+
+anova(sw_2w_int_mod, sw_int_mod)[2, "Pr(>F)"]
+summary(sw_int_mod)$coef["Education:Catholic:Infant.Mortality", "Pr(>|t|)"]
+
+```
+
+4 and 14 are wrong
+
+
+
+
+
+
+
+
+
+
+
+
+

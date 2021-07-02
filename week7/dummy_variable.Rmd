@@ -1,0 +1,364 @@
+---
+title: "dummy_variable"
+author: "AP"
+date: "6/29/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+options(scipen = 1, digits = 2)
+```
+
+```{r}
+mtcars
+```
+
+```{r}
+plot(mpg ~ hp, data = mtcars, cex = 2)
+```
+
+```{r}
+plot(mpg ~ hp, data = mtcars, 
+     col = am + 1,
+     pch = am + 1,
+     cex = 2)
+legend("topright", c("Automatic", "Manual"),
+       col = c(1, 2), pch = c(1, 2))
+```
+
+$$
+Y = \beta_0 + \beta_1x_1 + \epsilon,
+$$
+
+```{r}
+(mpg_hp_slr <- lm(mpg ~ hp, data = mtcars))
+```
+
+
+
+```{r}
+plot(mpg ~ hp, data = mtcars, 
+     col = am + 1,
+     pch = am + 1,
+     main = "Underestimating Manual, Overestimating Automatic",
+     cex = 2)
+abline(mpg_hp_slr, lwd = 3, col = "gray")
+legend("topright", c("Automatic", "Manual"),
+       col = c(1, 2), pch = c(1, 2))
+```
+
+## Dummy Variable
+
+$$
+Y = \beta_0 + \beta_1x_1 + \beta_2x_2 + \epsilon,
+$$
+
+
+$$
+x_2 = 
+  \begin{cases}
+  1 & \text{manual transmission} \\
+  0 & \text{automatic transmission}
+  \end{cases}
+$$
+```{r}
+mtcars$am
+```
+
+
+```{r}
+(mpg_hp_add <- lm(mpg ~ hp + am, data = mtcars))
+```
+
+For automatic transmissions, that is $x_2 = 0$, we have,
+
+$$
+Y = \beta_0 + \beta_1x_1 + \epsilon,
+$$
+
+For manual transmissions, $x_2 = 1$, we have,
+
+$$
+Y = (\beta_0+\beta_2) + \beta_1x_1 + \epsilon,
+$$
+
+We have a model with 2 parallel lines, i.e. 2 different intercepts
+
+```{r}
+(int_auto <- mpg_hp_add$coef[1])
+# beta_0 establishes a baseline from which we add the other intercept
+# beta_2
+(int_manu <- mpg_hp_add$coef[1] + mpg_hp_add$coef[3])
+
+# both lines have the same slope
+(slope <- mpg_hp_add$coef[2])
+```
+
+The fitted point jumps from one line to the other depending on $x_2$ value.
+
+```{r}
+plot(mpg ~ hp, data = mtcars, 
+     col = am + 1,
+     pch = am + 1,
+     cex = 2)
+abline(int_auto, slope, col = 1, lty = 1, lwd = 2)
+abline(int_manu, slope, col = 2, lty = 2, lwd = 2)
+# The line obtained from the model is the same as the base one
+# when x2=0
+#abline(mpg_hp_add, col = 3, lty = 2, lwd = 2)
+legend("topright", c("Automatic", "Manual"),
+       col = c(1, 2), pch = c(1, 2))
+```
+
+Is it relevant to have such a model? (Two lines)
+We just test for the significance of haven $x_2$ in the model
+
+$$
+H_0: \beta_2 = 0 \quad \text{vs} \quad H_1: \beta_2 \neq 0
+$$
+
+```{r}
+summary(mpg_hp_add)$coef["am", ]
+```
+
+```{r}
+anova(mpg_hp_slr, mpg_hp_add)
+```
+
+Recapping some interpretations:
+
+- $\hat\beta_0 = `r mpg_hp_add$coef[1]`$ is the estimate average `mpg` for a car with an automatic transmission and **0** `hp`.
+
+- $\hat\beta_0 + \hat\beta_2 = `r mpg_hp_add$coef[1]+mpg_hp_add$coef[3]`$ is the estimate average `mpg` for a car with manual transmission and **0** `hp`.
+
+- $\hat\beta_2 = `r mpg_hp_add$coef[3]`$ is the estimate **difference** in average `mpg` for cars with manual transmission as compared to those with automatic transmission, for **any** `hp`.
+
+- $\hat\beta_1 = `r mpg_hp_add$coef[2]`$ is the estimated change in average `mpg` for an increase of one `hp`, for **either** transmission types.
+
+## Factor Variables
+
+```{r}
+autompg <- read.table(
+  "http://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data",
+  quote = "\"",
+  comment.char = "",
+  stringsAsFactors = FALSE
+)
+#give headers
+colnames(autompg) <- c("mpg","cyl","disp","hp","wt","acc","year","origin","name")
+# remove missing data marked as ?
+autompg <- subset(autompg, autompg$hp != "?")
+# remove a record that has issues
+autompg <- subset(autompg, autompg$name != "plymouth reliant")
+# give the dataset row names, based on the engine, year and name
+rownames(autompg) <- paste(autompg$cyl, "cylinder", autompg$year, autompg$name)
+# remove the name and origin columns
+autompg <- subset(autompg, select = c("mpg","cyl","disp","hp","wt","acc","year", "origin"))
+# change horsepower to numeric
+autompg$hp <- as.numeric(autompg$hp)
+
+# create a dummy variable for origin
+autompg$domestic <- as.numeric(autompg$origin == 1)
+
+# Remove 3 and 4 cyl cars
+autompg <- autompg[autompg$cyl != 3, ]
+autompg <- autompg[autompg$cyl != 5, ]
+
+unique(autompg$cyl)
+autompg$cyl <- as.factor(autompg$cyl)
+str(autompg)
+```
+
+
+```{r}
+tibble::as_tibble(autompg)
+```
+
+$$
+Y = \beta_0 + \beta_1x_1 + \beta_2x_2 + \epsilon,
+$$
+where
+
+- $Y$ is `mpg`
+- $x_1$ is `disp`
+- $x_2$ is `domestic`
+
+$$
+x_2 = 
+  \begin{cases}
+  1 & \text{domestic} \\
+  0 & \text{foreign}
+  \end{cases}
+$$
+```{r}
+(add_mod_dummy <- lm(mpg ~ disp + domestic, data = autompg))
+
+(int_foreign <- add_mod_dummy$coef[1])
+(int_domestic <- add_mod_dummy$coef[1] + add_mod_dummy$coef[3])
+
+# both lines have the same slope
+(slope <- add_mod_dummy$coef[2])
+
+plot(mpg ~ disp, data = autompg, 
+     col = domestic + 1,
+     pch = domestic + 1,
+     cex = 2)
+abline(int_foreign, slope, col = 1, lty = 1, lwd = 2)
+abline(int_domestic, slope, col = 2, lty = 2, lwd = 2)
+# The line obtained from the model is the same as the base one
+# when x2=0
+#abline(mpg_hp_add, col = 3, lty = 2, lwd = 2)
+legend("topright", c("foreign", "domestic"),
+       col = c(1, 2), pch = c(1, 2))
+
+```
+
+Encode variables as factors.
+
+```{r}
+autompg$origin <- ifelse(autompg$domestic == 1, "domestic", "foreign")
+is.factor(autompg$origin)
+autompg$origin <- as.factor(autompg$origin)
+is.factor(autompg$origin)
+```
+
+```{r}
+levels(autompg$origin)
+as.numeric(autompg$origin)
+```
+
+Now we can fit with the factor variable. R creates the dummy variable for us, by default it does it alphabetically, domestic = 0 and foreign = 1
+
+So in this case we have the opposite we had with our dummy variable before:
+
+$$
+x_2 = 
+  \begin{cases}
+  0 & \text{domestic} \\
+  1 & \text{foreign}
+  \end{cases}
+$$
+This means the `reference level` if flipped and we see $\beta_2$ positive this time.
+
+```{r}
+(add_mod_factor <- lm(mpg ~ disp + origin, data = autompg))
+```
+
+Some predictions:
+
+```{r}
+predict(add_mod_dummy, data.frame(disp = 150, domestic = 1))
+```
+
+We get the same prediction.
+
+```{r}
+predict(add_mod_factor, data.frame(disp = 150, origin = "domestic"))
+```
+
+```{r}
+all.equal(add_mod_dummy$fitted.values, add_mod_factor$fitted.values)
+```
+
+One problem with our dummy variable is that is numeric and we can make predictions with any number, but it doesn't make sense since we know domestic is a category.
+
+```{r}
+predict(add_mod_dummy, data.frame(disp = 150, domestic = 3.14))
+```
+
+Using factors we avoid that problem:
+
+```{r eval=FALSE}
+predict(add_mod_factor, data.frame(disp = 150, origin = "other"))
+```
+
+## Factors with more than 2 levels
+
+```{r}
+is.factor(autompg$cyl)
+levels(autompg$cyl)
+```
+
+$$
+v_1 = 
+  \begin{cases}
+  1 & \text{4 cylinder} \\
+  0 & \text{not 4 cylinder}
+  \end{cases}
+$$
+$$
+v_2 = 
+  \begin{cases}
+  1 & \text{6 cylinder} \\
+  0 & \text{not 6 cylinder}
+  \end{cases}
+$$
+$$
+v_3 = 
+  \begin{cases}
+  1 & \text{8 cylinder} \\
+  0 & \text{not 8 cylinder}
+  \end{cases}
+$$
+```{r}
+(mpg_disp_add_cyl <- lm(mpg ~ disp + cyl, data = autompg))
+```
+
+$$
+Y = \beta_0 + \beta_1x_1 + \beta_2v_2 + \beta_3v_3 + \epsilon,
+$$
+
+```{r}
+# Reference level it's when v_1 = 4
+int_4cyl <- mpg_disp_add_cyl$coef[1]
+# Reference level + beta_3 is the intercept for 6 cyl
+int_6cyl <- mpg_disp_add_cyl$coef[1] + mpg_disp_add_cyl$coef[3]
+# Reference level + beta_4 is the intercept for 8 cyl
+int_8cyl <- mpg_disp_add_cyl$coef[1] + mpg_disp_add_cyl$coef[4]
+
+slope <- mpg_disp_add_cyl$coef[2]
+
+plot_colors <- c("Darkorange", "darkgrey", "dodgerblue")
+
+plot(mpg ~ disp, data = autompg, 
+     col = plot_colors[cyl],
+     pch = as.numeric(cyl),
+     cex = 2)
+abline(int_4cyl, slope, col = plot_colors[1], lty = 1, lwd = 2)
+abline(int_6cyl, slope, col = plot_colors[2], lty = 2, lwd = 2)
+abline(int_8cyl, slope, col = plot_colors[3], lty = 2, lwd = 2)
+
+legend("topright", levels(autompg$cyl),
+       col = plot_colors, pch = c(1, 2, 3))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,397 @@
+---
+title: "interactions"
+author: "AP"
+date: "6/30/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+options(scipen = 1, digits = 4)
+```
+
+
+## Factor Variables
+
+```{r}
+autompg <- read.table(
+  "http://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data",
+  quote = "\"",
+  comment.char = "",
+  stringsAsFactors = FALSE
+)
+#give headers
+colnames(autompg) <- c("mpg","cyl","disp","hp","wt","acc","year","origin","name")
+# remove missing data marked as ?
+autompg <- subset(autompg, autompg$hp != "?")
+# remove a record that has issues
+autompg <- subset(autompg, autompg$name != "plymouth reliant")
+# give the dataset row names, based on the engine, year and name
+rownames(autompg) <- paste(autompg$cyl, "cylinder", autompg$year, autompg$name)
+# remove the name and origin columns
+autompg <- subset(autompg, select = c("mpg","cyl","disp","hp","wt","acc","year", "origin"))
+# change horsepower to numeric
+autompg$hp <- as.numeric(autompg$hp)
+
+# create a dummy variable for origin
+autompg$domestic <- as.numeric(autompg$origin == 1)
+
+# Remove 3 and 4 cyl cars
+autompg <- autompg[autompg$cyl != 3, ]
+autompg <- autompg[autompg$cyl != 5, ]
+
+unique(autompg$cyl)
+autompg$cyl <- as.factor(autompg$cyl)
+str(autompg)
+```
+
+
+```{r}
+tibble::as_tibble(autompg)
+```
+
+$$
+Y = \beta_0 + \beta_1x_1 + \beta_2x_2 + \epsilon,
+$$
+where
+
+- $Y$ is `mpg`
+- $x_1$ is `disp`
+- $x_2$ is `domestic`
+
+$$
+x_2 = 
+  \begin{cases}
+  1 & \text{domestic} \\
+  0 & \text{foreign}
+  \end{cases}
+$$
+```{r}
+(add_mod_dummy <- lm(mpg ~ disp + domestic, data = autompg))
+
+(int_foreign <- add_mod_dummy$coef[1])
+(int_domestic <- add_mod_dummy$coef[1] + add_mod_dummy$coef[3])
+
+# both lines have the same slope
+(slope <- add_mod_dummy$coef[2])
+
+plot(mpg ~ disp, data = autompg, 
+     col = domestic + 1,
+     pch = domestic + 1,
+     cex = 2)
+abline(int_foreign, slope, col = 1, lty = 1, lwd = 2)
+abline(int_domestic, slope, col = 2, lty = 2, lwd = 2)
+# The line obtained from the model is the same as the base one
+# when x2=0
+#abline(mpg_hp_add, col = 3, lty = 2, lwd = 2)
+legend("topright", c("foreign", "domestic"),
+       col = c(1, 2), pch = c(1, 2))
+
+```
+
+
+# Numeric-Categorical Interaction
+
+$$
+Y = \beta_0 + \beta_1x_1 + \beta_2x_2 + \beta_3x_1x_2 + \epsilon
+$$
+
+For foreign cars, $x_2=0$, we have
+
+$$
+Y = \beta_0 + \beta_1x_1 + \epsilon
+$$
+For domestic cars, $x_2=1$
+
+$$
+Y = (\beta_0 + \beta_2) + (\beta_1 + \beta_3)x_1 + \epsilon
+$$
+- $\beta_0$, average `mpg` when `disp` is *0* for a foreign car.
+- $\beta_1$, change in average `mpg` for and increment of 1 `disp`, for a foreign car.
+- $\beta_0 + \beta_2$, average `mpg` when `disp` is *0* for a domestic car.
+- $\beta_1 + \beta_3$, change in average `mpg` for and increment of 1 `disp`, for a domestic car.
+
+```{r eval=FALSE}
+## We don't need to do this manually
+autompg$x3 <- autompg$disp * autompg$domestic
+```
+
+```{r}
+(mpg_disp_int <- lm(mpg ~ disp + domestic + disp:domestic, data = autompg))
+```
+
+```{r}
+# This one is a shortcut, R will include the lower order terms too
+# that is disp + domestic
+(mpg_disp_int2 <- lm(mpg ~ disp * domestic, data = autompg))
+```
+
+```{r}
+summary(mpg_disp_int)
+```
+
+Now we can ask, do we need an interaction term?
+
+```{r}
+anov1 <- anova(add_mod_dummy, mpg_disp_int)
+
+# Since we are testing for 1 parameter beta_3, we can use t or F test
+summary(mpg_disp_int)$coef["disp:domestic", "Pr(>|t|)"]
+anov1[2, "Pr(>F)"]
+```
+
+```{r}
+int_foreign <- mpg_disp_int$coef[1]
+int_domestic <- mpg_disp_int$coef[1] + mpg_disp_int$coef[3]
+
+slope_foreign <- mpg_disp_int$coef[2]
+slope_domestic <- mpg_disp_int$coef[2] + mpg_disp_int$coef[4]
+
+plot(mpg ~ disp, data = autompg, 
+     col = domestic + 1,
+     pch = domestic + 1,
+     cex = 2)
+abline(int_foreign, slope_foreign, col = 1, lty = 1, lwd = 2)
+abline(int_domestic, slope_domestic, col = 2, lty = 2, lwd = 2)
+legend("topright", c("foreign", "domestic"),
+       col = c(1, 2), pch = c(1, 2))
+
+```
+
+# Numeric-numeric interaction
+
+$$
+Y = \beta_0 + \beta_1x_1 + \beta_2x_2 + \beta_3x_1x_2 + \epsilon
+$$
+where
+
+- $Y$ is `mpg`
+- $x_1$ is `disp`
+- $x_2$ is `hp`
+
+Now the slope of $x_1$ is affected by $x_2$ and the opposite is true as well.
+
+$$
+Y = \beta_0 + (\beta_1 + \beta_3x_2)x_1 + \beta_2x_2 + \epsilon
+$$
+$$
+Y = \beta_0 + \beta_1x_1 + (\beta_2 + \beta_3x_1)x_2 + \epsilon
+$$
+
+Let's fit the additive and the interactive models
+
+```{r}
+(mpg_disp_add_hp <- lm(mpg ~ disp + hp, data = autompg))
+(mpg_disp_int_hp <- lm(mpg ~ disp * hp, data = autompg))
+summary(mpg_disp_int_hp)
+```
+
+Is the $x_1$ $x_2$ interaction relevant?
+
+$$
+H_0: \beta_3 = 0
+$$
+
+# Cylinder example
+
+```{r}
+is.factor(autompg$cyl)
+levels(autompg$cyl)
+```
+
+$$
+v_1 = 
+  \begin{cases}
+  1 & \text{4 cylinder} \\
+  0 & \text{not 4 cylinder}
+  \end{cases}
+$$
+$$
+v_2 = 
+  \begin{cases}
+  1 & \text{6 cylinder} \\
+  0 & \text{not 6 cylinder}
+  \end{cases}
+$$
+$$
+v_3 = 
+  \begin{cases}
+  1 & \text{8 cylinder} \\
+  0 & \text{not 8 cylinder}
+  \end{cases}
+$$
+```{r}
+(mpg_disp_add_cyl <- lm(mpg ~ disp + cyl, data = autompg))
+```
+
+$$
+Y = \beta_0 + \beta_1x_1 + \beta_2v_2 + \beta_3v_3 + \epsilon,
+$$
+
+```{r}
+# Reference level it's when v_1 = 4
+int_4cyl <- mpg_disp_add_cyl$coef[1]
+# Reference level + beta_3 is the intercept for 6 cyl
+int_6cyl <- mpg_disp_add_cyl$coef[1] + mpg_disp_add_cyl$coef[3]
+# Reference level + beta_4 is the intercept for 8 cyl
+int_8cyl <- mpg_disp_add_cyl$coef[1] + mpg_disp_add_cyl$coef[4]
+
+slope <- mpg_disp_add_cyl$coef[2]
+
+plot_colors <- c("Darkorange", "darkgrey", "dodgerblue")
+
+plot(mpg ~ disp, data = autompg, 
+     col = plot_colors[cyl],
+     pch = as.numeric(cyl),
+     cex = 2)
+abline(int_4cyl, slope, col = plot_colors[1], lty = 1, lwd = 2)
+abline(int_6cyl, slope, col = plot_colors[2], lty = 2, lwd = 2)
+abline(int_8cyl, slope, col = plot_colors[3], lty = 2, lwd = 2)
+
+legend("topright", levels(autompg$cyl),
+       col = plot_colors, pch = c(1, 2, 3))
+```
+
+For a model where each line has a different slope we need:
+
+$$
+Y = \beta_0 + \beta_1x + \beta_2v_2 + \beta_3v_3 + \gamma_2xv_2 + \gamma_3xv_3 + \epsilon,
+$$
+
+
+```{r}
+(mpg_disp_int_cyl <- lm(mpg ~ disp * cyl, data = autompg))
+```
+
+```{r}
+# Reference level it's when v_1 = 4
+int_int_4cyl <- mpg_disp_int_cyl$coef[1]
+# Reference level + beta_3 is the intercept for 6 cyl
+int_int_6cyl <- mpg_disp_int_cyl$coef[1] + mpg_disp_int_cyl$coef[3]
+# Reference level + beta_4 is the intercept for 8 cyl
+int_int_8cyl <- mpg_disp_int_cyl$coef[1] + mpg_disp_int_cyl$coef[4]
+
+slope_4cyl <- mpg_disp_int_cyl$coef[2]
+slope_6cyl <- mpg_disp_int_cyl$coef[2] + mpg_disp_int_cyl$coef[5]
+slope_8cyl <- mpg_disp_int_cyl$coef[2] + mpg_disp_int_cyl$coef[6]
+
+plot_colors <- c("Darkorange", "darkgrey", "dodgerblue")
+
+plot(mpg ~ disp, data = autompg, 
+     col = plot_colors[cyl],
+     pch = as.numeric(cyl),
+     cex = 2)
+abline(int_int_4cyl, slope_4cyl, col = plot_colors[1], lty = 1, lwd = 2)
+abline(int_int_6cyl, slope_6cyl, col = plot_colors[2], lty = 2, lwd = 2)
+abline(int_int_8cyl, slope_8cyl, col = plot_colors[3], lty = 2, lwd = 2)
+
+legend("topright", levels(autompg$cyl),
+       col = plot_colors, pch = c(1, 2, 3))
+```
+
+Is having different slopes significant?
+
+$$
+H_0: \gamma_2 = \gamma_3 = 0
+$$
+Since we are testing for 2 parameters, we need an anova test.
+
+```{r}
+anova(mpg_disp_add_cyl, mpg_disp_int_cyl)
+```
+
+# Parameterization
+
+Instead of having reference levels for the slope and intercept. We can have separate:
+
+$$
+Y = \mu_1v_1 + \mu_2v_2 + \mu_3v_3 + \beta_1xv_1 + \beta_2xv_2 + \beta_3xv_3 + \epsilon
+$$
+
+```{r}
+# both slope and intercept with reference level
+lm(mpg ~ disp * cyl, data = autompg)
+# both are independent, no reference level
+lm(mpg ~ 0 + cyl + disp:cyl, data = autompg)
+
+# Intercepts are independent, but slopes have reference levels
+lm(mpg ~ 0 + cyl * disp, data = autompg)
+lm(mpg ~ 0 + cyl + disp + disp:cyl, data = autompg)
+```
+
+
+# Larger models
+
+$$
+Y = \beta_0 + \beta_1x_1 + \beta_2x_2 + \beta_3x_3 + \beta_4x_1x_2 + \beta_5x_1x_3 + \beta_6x_2x_3 + \beta_7x_1x_2x_3 + \epsilon,
+$$
+```{r}
+(big_model <- lm(mpg ~ disp * hp * domestic, data = autompg))
+# This one also gives us all possible interactions
+#(big_model <- lm(mpg ~ (disp + hp + domestic) ^ 3, data = autompg))
+```
+
+Is the 3 way interaction significant?
+
+$$
+H_0: \beta_7 = 0
+$$
+```{r}
+(two_way_int_mod <- lm(mpg ~ disp * hp + disp * domestic + hp * domestic, data = autompg))
+# Below means I want all possible 2 way interactions
+# two_way_int_mod <- lm(mpg ~ (disp + hp + domestic) ^ 3, data = autompg))
+```
+
+```{r}
+anova(two_way_int_mod, big_model)
+summary(big_model)
+```
+
+The big model has a smaller mean squared errors but is not significant
+
+```{r}
+mean(resid(big_model) ^ 2)
+mean(resid(two_way_int_mod) ^ 2)
+```
+
+Are the 2 way interactions significant?
+
+$$
+H_0: \beta_4 = \beta_5 = \beta_6 = 0
+$$
+
+```{r}
+(additive_mode <- lm(mpg ~ disp + hp + domestic, data = autompg))
+
+anova(additive_mode, two_way_int_mod)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

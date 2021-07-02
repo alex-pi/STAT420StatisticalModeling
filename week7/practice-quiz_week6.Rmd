@@ -1,0 +1,108 @@
+---
+title: "practice-quiz_week6"
+author: "AP"
+date: "6/30/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+# Question 1
+
+$$Y=\beta_0+\beta_1x_1+\beta_2x_2+\beta_3x_1x_2 + ϵ$$
+
+where
+
+$Y$ is tooth length
+$x_1$ is the dose in milligrams per day
+$x_2$ is a dummy variable that takes the value 11 when the supplement type is ascorbic acid
+
+Use this model to obtain an estimate of the change in mean tooth length for a dose increase of 1 milligram per day, when the supplement type is orange juice.
+
+```{r}
+?ToothGrowth
+head(ToothGrowth)
+
+levels(ToothGrowth$supp)
+ToothGrowth$supp
+as.numeric(ToothGrowth$supp)
+
+(tooth_mod <- lm(len ~ dose * supp, data = ToothGrowth))
+summary(tooth_mod)
+summary(tooth_mod)$coef[2, 1]
+```
+
+
+# Question 2
+
+Use the model from Question 1 to obtain an estimate of the change in mean tooth length for an dose increase of 1 milligram per day, when the supplement type is ascorbic acid.
+
+```{r}
+tooth_mod$coef
+tooth_mod$coef[2] + tooth_mod$coef[4]
+```
+
+# Question 3
+
+The answers to the two previous questions should be different, but are these results significant? Test for interaction between dose and supplement type. Report the p-value of the test.
+
+```{r}
+summary(tooth_mod)$coef
+summary(tooth_mod)$coef[4, "Pr(>|t|)"]
+
+anova(lm(len ~ dose + supp, data = ToothGrowth), tooth_mod)[2, "Pr(>F)"]
+```
+
+# Question 4
+
+Note that there are only three unique values for the dosages. For Questions 4 and 5, consider the dose variable a categorical variable.
+
+The previous model, using dose as numeric, assumed that the difference between a dose of 0.5 and 1.0 is the same as the difference between a dose of 1.0 and 1.5, but allowed us to make predictions for any dosage.
+
+Considering dose a categorical variable, we will only be able to make predictions at the three existing dosages, but no longer is the relationship between dose and response constrained to be linear.
+
+Fit the regression model
+
+
+$$Y=\beta_0+\beta_1x_1+\beta_2x_2+\beta_3x_3 + ϵ$$
+
+where
+
+$Y$ is tooth length
+$x_1$ is a dummy variable that takes the value 11 when the dose is 1.0 milligrams per day
+$x_2$ is a dummy variable that takes the value 11 when the dose is 2.0 milligrams per day
+$x_3$ is a dummy variable that takes the value 11 when the supplement type is ascorbic acid
+
+Use this model to obtain an estimate of the difference in mean tooth length for dosages of 1.0 and 2.0 milligrams per day for both supplement types. (Since we are not considering interactions, the supplement type does not matter.)
+
+```{r}
+unique(ToothGrowth$dose)
+is.factor(ToothGrowth$dose)
+
+ToothGrowth$dosef <- as.factor(ToothGrowth$dose)
+levels(ToothGrowth$dosef)
+
+cat_mod <- lm(len ~ dosef + supp, data = ToothGrowth)
+lm(len ~ 0 + dosef + supp, data = ToothGrowth)$coef
+cat_mod$coefficients
+
+preds1 <- predict(cat_mod, data.frame(dosef = c("1", "2"), supp = c("VC", "VC")))
+
+preds2 <- predict(cat_mod, data.frame(dosef = c("1", "2"), supp = "OJ"))
+
+# These 2 are the same distance because we do not have interactions...
+# not sure I completely understand this one...
+preds1[1] - preds1[2]
+preds2[1] - preds2[2] 
+
+```
+
+
+# Question 5
+
+```{r}
+lm(len ~ 0 + dosef + supp, data = ToothGrowth)$coef[3]
+```
+
+
