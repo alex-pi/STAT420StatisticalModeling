@@ -1,0 +1,148 @@
+---
+title: "collinearity"
+author: "AP"
+date: "7/13/2021"
+output: html_document
+---
+
+# Data example
+
+```{r, fig.height=8, fig.width=8}
+library(faraway)
+pairs(seatpos, col = "dodgerblue")
+```
+- A predictor with itself has perfect collinearity.
+- HtShoes and Ht have very whigh collinearity, which makes sense.
+
+```{r}
+round(cor(seatpos), 3)
+```
+
+When using all predictors.
+
+- The p-value for the significance of the regression is small.
+- But the individual p-values are not.
+
+This hints a collinearity issue in the model.
+
+```{r}
+hip_model <- lm(hipcenter ~ ., data = seatpos)
+summary(hip_model)
+```
+
+### Variance Inflation Factor
+
+A high $R^2$ here indicates that `HtShoes` is very well explained by the other predictors, specially `Ht`.
+
+```{r}
+ht_shoes_model = lm(HtShoes ~ . - hipcenter, data = seatpos)
+summary(ht_shoes_model)$r.squared
+```
+
+$$
+\text{Var}(\hat{\beta_j}) = \sigma^2 C_{jj} = \sigma^2 \left( \frac{1}{1 - R_j^2}  \right) \frac{1}{S_{x_j x_j}}
+$$
+We can see that `Ht` and `HtShoes` have a high VIF.
+
+```{r}
+vif(hip_model)
+```
+
+Adding random noise should not affect the coefficients of our model.
+
+```{r}
+set.seed(1337)
+noise = rnorm(n = nrow(seatpos), mean = 0, sd = 5)
+hip_model_noise = lm(hipcenter + noise ~ ., data = seatpos)
+```
+
+```{r}
+coef(hip_model)
+coef(hip_model_noise)
+```
+
+But!, collinearity doesn't affect predictions...
+
+Here, plotting the fitted values of both models give almost a 45 degree line, which indicates the predictions are almost the same.
+
+```{r}
+plot(fitted(hip_model), fitted(hip_model_noise), col = "dodgerblue", pch = 20,
+     xlab = "Predicted, Without Noise", ylab = "Predicted, With Noise", cex = 1.5)
+abline(a = 0, b = 1, col = "darkorange", lwd = 2)
+```
+A smaller model.
+
+
+
+```{r}
+hip_model_small = lm(hipcenter ~ Age + Arm + Ht, data = seatpos)
+summary(hip_model_small)
+```
+This smaller model doesn't seem to have a collinearity issue.
+
+```{r}
+vif(hip_model_small)
+```
+
+```{r}
+set.seed(1337)
+noise = rnorm(n = nrow(seatpos), mean = 0, sd = 5)
+hip_model_small_noise = lm(hipcenter + noise ~ Age + Arm + Ht, data = seatpos)
+```
+
+No drastic changes in the coefficients. (Like flipping signs)
+
+```{r}
+coef(hip_model_small)
+coef(hip_model_small_noise)
+```
+
+In this case the smaller model seems more effective in the anova test.
+
+```{r}
+anova(hip_model_small, hip_model)
+```
+
+Let's try to add `HtShoes` to this smaller model.
+
+- The residuals of `hip_model_small` tells us what is NOT explained by `Age + Arm + Ht`.
+- The residuals for the model below, tells us what part of `HtShoes` is NOT explained by `Age + Arm + Ht`.
+
+```{r}
+ht_shoes_model_small = lm(HtShoes ~ Age + Arm + Ht, data = seatpos)
+```
+
+Now we check the correlation of those residuals:
+
+```{r}
+cor(resid(ht_shoes_model_small), resid(hip_model_small))
+```
+
+Since the **partial correlation coeffiecient** is small, adding `HtShoes` to the model will be of little benefit. 
+
+We can observed the same with the **variable added plot**:
+
+```{r}
+plot(resid(hip_model_small) ~ resid(ht_shoes_model_small), 
+     col = "dodgerblue", pch = 20,
+     xlab = "Residuals, Added Predictor", 
+     ylab = "Residuals, Original Model")
+abline(h = 0, lty = 2)
+abline(v = 0, lty = 2)
+abline(lm(resid(hip_model_small) ~ resid(ht_shoes_model_small)),
+       col = "darkorange", lwd = 2)
+```
+
+**This trade off is mostly true in general. As a model gets more predictors, errors will get smaller and its prediction will be better, but it will be harder to interpret.**
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,470 @@
+---
+title: "transformations"
+author: "AP"
+date: "7/8/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Response Transformations
+
+```{r}
+initech = read.csv("./initech.csv")
+```
+
+```{r}
+plot(salary ~ years, data = initech, col = "grey", pch = 20,
+     cex = 1.5, main = "Salaries at Initech, By Seniority")
+```
+
+```{r}
+initech_fit <- lm(salary ~ years, data = initech)
+summary(initech_fit)
+```
+
+```{r}
+plot(salary ~ years, data = initech, col = "grey", pch = 20,
+     cex = 1.5, main = "Salaries at Initech, By Seniority")
+abline(initech_fit, col = "darkorange", lwd = 2)
+```
+
+```{r}
+par(mfrow = c(1, 2))
+plot(initech_fit$fitted.values, initech_fit$residuals, 
+     col = "grey", pch = 20,
+     xlab = "Fitted", ylab = "Residuals",
+     cex = 1.5, main = "Fitted vs Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+
+qqnorm(initech_fit$residuals, main = "Normal Q-Q Plot", col = "darkgrey")
+qqline(initech_fit$residuals, col = "darkorange", lwd = 2)
+```
+
+
+```{r}
+initech_fit_log <- lm(log(salary) ~ years, data = initech)
+```
+
+$$
+\log(Y_i) = \beta_0 + \beta_1x_i + \epsilon_i
+$$
+
+```{r}
+plot(log(salary) ~ years, data = initech, col = "grey", pch = 20,
+     cex = 1.5, main = "Salaries at Initech, By Seniority")
+abline(initech_fit_log, col = "darkorange", lwd = 2)
+```
+
+$$
+Y_i = \exp(\beta_0 + \beta_1x_i) \cdot \exp(\epsilon_i)
+$$
+
+```{r}
+plot(salary ~ years, data = initech, col = "grey", pch = 20,
+     cex = 1.5, main = "Salaries at Initech, By Seniority")
+curve(exp(initech_fit_log$coef[1] + initech_fit_log$coef[2] * x), 
+      from = 0, to = 30, add = TRUE, col = "darkorange", lwd = 2)
+```
+
+```{r}
+par(mfrow = c(1, 2))
+plot(initech_fit_log$fitted.values, initech_fit_log$residuals, 
+     col = "grey", pch = 20,
+     xlab = "Fitted", ylab = "Residuals",
+     cex = 1.5, main = "Fitted vs Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+
+qqnorm(initech_fit_log$residuals, 
+       main = "Normal Q-Q Plot", col = "darkgrey")
+qqline(initech_fit_log$residuals, col = "darkorange", lwd = 2)
+```
+
+The next comparison is not valid, since our transformation is on completely different scale.
+
+```{r}
+sqrt(mean(resid(initech_fit) ^ 2))
+sqrt(mean(resid(initech_fit_log) ^ 2))
+```
+
+We should exp the fitted values first
+
+```{r}
+sqrt(mean((initech$salary - exp(initech_fit_log$fitted.values)) ^ 2 ))
+```
+
+# Predictor Transformations
+
+## A Quadratic Model
+
+```{r}
+sim_quad <- function(sample_size = 500) {
+  x <- runif(n = sample_size) * 5
+  y <- 3 + 5 * x ^ 2 + rnorm(n = sample_size, mean = 0, sd = 5)
+  data.frame(x, y)
+}
+```
+
+
+```{r}
+set.seed(314)
+quad_data <- sim_quad(sample_size = 200)
+```
+
+```{r}
+lin_fit <- lm(y ~ x, data = quad_data)
+summary(lin_fit)
+```
+
+```{r}
+plot(y ~ x, data = quad_data, col = "grey", pch = 20,
+     cex = 1.5, main = "Simulated Quadratic Data")
+abline(lin_fit, col = "darkorange", lwd = 2)
+```
+
+```{r}
+par(mfrow = c(1, 2))
+plot(lin_fit$fitted.values, lin_fit$residuals, 
+     col = "grey", pch = 20,
+     xlab = "Fitted", ylab = "Residuals",
+     cex = 1.5, main = "Fitted vs Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+
+qqnorm(lin_fit$residuals, main = "Normal Q-Q Plot", col = "darkgrey")
+qqline(lin_fit$residuals, col = "darkorange", lwd = 2)
+```
+
+$$
+Y_i = \beta_0 + \beta_1x_i + \beta_2x_i^2 + \epsilon_i
+$$
+```{r}
+quad_fit <- lm(y ~ x + I(x^2), data = quad_data)
+summary(quad_fit)
+```
+
+```{r}
+cof <- quad_fit$coefficients
+plot(y ~ x, data = quad_data, col = "grey", pch = 20,
+     cex = 1.5, main = "Simulated Quadratic Data")
+curve(cof[1] + cof[2] * x + cof[3] * x ^ 2, 
+      from = -5, to = 30, add = TRUE, col = "darkorange", lwd = 2)
+```
+
+```{r}
+par(mfrow = c(1, 2))
+plot(quad_fit$fitted.values, quad_fit$residuals, 
+     col = "grey", pch = 20,
+     xlab = "Fitted", ylab = "Residuals",
+     cex = 1.5, main = "Fitted vs Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+
+qqnorm(quad_fit$residuals, main = "Normal Q-Q Plot", col = "darkgrey")
+qqline(quad_fit$residuals, col = "darkorange", lwd = 2)
+```
+
+
+## Overfitting and Extrapolation
+
+```{r}
+sim_for_perf <- function() {
+  x <- seq(0, 10)
+  y <- 3 + x - 4 * x ^ 2 + rnorm(n = 11, mean = 0, sd = 25)
+  data.frame(x, y)
+}
+```
+
+
+```{r}
+set.seed(1234)
+data_for_perf <- sim_for_perf()
+```
+
+```{r}
+fit_correct <- lm(y ~ x + I(x^2), data = data_for_perf)
+fit_perfect <- lm(y ~ x + I(x^2) + I(x^3) + I(x^4) + I(x^5)
+                   + I(x^6) + I(x^7) + I(x^8) + I(x^9) + I(x^10)
+                  , data = data_for_perf)
+```
+
+```{r}
+x_plot <- seq(-5, 15, by = 0.1)
+plot(y ~ x, data = data_for_perf, col = "grey", pch = 20,
+     cex = 2, ylim = c(-450, 100))
+lines(x_plot, predict(fit_correct, 
+          newdata = data.frame(x = x_plot)),
+       col = "dodgerblue", lwd = 2, lty = 1)
+lines(x_plot, predict(fit_perfect, 
+          newdata = data.frame(x = x_plot)),
+       col = "darkorange", lwd = 2, lty = 1)
+```
+
+
+## comparing Polynomial Models
+
+```{r}
+sim_higher <- function(sample_size = 250) {
+  x <- runif(n = sample_size, min = -1, max = 1) * 2
+  y <- 3 + -6 * x ^ 2 + x ^ 4 + rnorm(n = sample_size, mean = 0, sd = 3)
+  data.frame(x, y)
+}
+```
+
+
+$$
+Y_i = \beta_0 + \beta_1x_i + \beta_2x_i^2 + \epsilon_i
+$$
+$$
+Y_i = \beta_0 + \beta_1x_i + \beta_2x_i^2 + \beta_3x_i^3 + \beta_4x_i^4 + \epsilon_i
+$$
+$$
+Y_i = \beta_0 + \beta_1x_i + \beta_2x_i^2 + \beta_3x_i^3 + \beta_4x_i^4 + \beta_5x_i^5 + \beta_6x_i^6 + \epsilon_i
+$$
+
+```{r}
+set.seed(42)
+data_higher <- sim_higher()
+```
+
+```{r}
+plot(y ~ x, data = data_higher, col = "grey", pch = 20,
+     cex = 1.5, main = "Simulated Quartic Data")
+```
+
+```{r}
+fit_2 <- lm(y ~ poly(x, 2), data = data_higher)
+fit_4 <- lm(y ~ poly(x, 4), data = data_higher)
+```
+
+```{r}
+x_plot <- seq(-5, 5, by = 0.05)
+plot(y ~ x, data = data_higher, col = "grey", pch = 20,
+     cex = 1.5, main = "Simulated Quartic Data")
+
+lines(x_plot, predict(fit_2, 
+          newdata = data.frame(x = x_plot)),
+       col = "dodgerblue", lwd = 2, lty = 1)
+lines(x_plot, predict(fit_4, 
+          newdata = data.frame(x = x_plot)),
+       col = "darkorange", lwd = 2, lty = 1)
+```
+
+
+```{r}
+par(mfrow = c(1, 2))
+plot(fit_2$fitted.values, fit_2$residuals, 
+     col = "grey", pch = 20,
+     xlab = "Fitted", ylab = "Residuals",
+     cex = 1.5, main = "Fitted vs Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+
+qqnorm(fit_2$residuals, main = "Normal Q-Q Plot", col = "darkgrey")
+qqline(fit_2$residuals, col = "darkorange", lwd = 2)
+```
+
+```{r}
+par(mfrow = c(1, 2))
+plot(fit_4$fitted.values, fit_4$residuals, 
+     col = "grey", pch = 20,
+     xlab = "Fitted", ylab = "Residuals",
+     cex = 1.5, main = "Fitted vs Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+
+qqnorm(fit_4$residuals, main = "Normal Q-Q Plot", col = "darkgrey")
+qqline(fit_4$residuals, col = "darkorange", lwd = 2)
+```
+
+```{r}
+anova(fit_2, fit_4)
+```
+
+```{r}
+fit_6 <- lm(y ~ poly(x, 6), data = data_higher)
+anova(fit_4, fit_6)
+```
+
+```{r}
+fit_4a <- lm(y ~ poly(x, degree = 4), data = data_higher)
+
+# Only these 2 are fitting exactly the model in formula above.
+fit_4b <- lm(y ~ poly(x, degree = 4, raw = TRUE), data = data_higher)
+fit_4c <- lm(y ~ x + I(x^2) + I(x^3) + I(x^4), data = data_higher)
+```
+
+```{r}
+unname(fit_4a$coef)
+
+# These 2 have the same coefficients
+unname(fit_4b$coef)
+unname(fit_4c$coef)
+```
+
+But all of them make the same predictions and have the same residuals.
+
+```{r}
+all.equal(fit_4a$fitted.values, fit_4b$fitted.values)
+all.equal(fit_4a$residuals, fit_4b$residuals)
+```
+
+## Data example
+
+```{r}
+# autompg example
+
+autompg <- read.table(
+  "http://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data",
+  quote = "\"",
+  comment.char = "",
+  stringsAsFactors = FALSE
+)
+#give headers
+colnames(autompg) <- c("mpg","cyl","disp","hp","wt","acc","year","origin","name")
+# remove missing data marked as ?
+autompg <- subset(autompg, autompg$hp != "?")
+# remove a record that has issues
+autompg <- subset(autompg, autompg$name != "plymouth reliant")
+# give the dataset row names, based on the engine, year and name
+rownames(autompg) <- paste(autompg$cyl, "cylinder", autompg$year, autompg$name)
+# remove the name and origin columns
+autompg <- subset(autompg, select = c("mpg","cyl","disp","hp","wt","acc","year", "origin"))
+# change horsepower to numeric
+autompg$hp <- as.numeric(autompg$hp)
+
+# create a dummy variable for origin
+autompg$domestic <- as.numeric(autompg$origin == 1)
+
+# Remove 3 and 4 cyl cars
+autompg <- autompg[autompg$cyl != 3, ]
+autompg <- autompg[autompg$cyl != 5, ]
+
+unique(autompg$cyl)
+autompg$cyl <- as.factor(autompg$cyl)
+```
+
+To check if we need polynomial relationships we can use scatterplots
+between all pairs of predictors!!
+
+for instance mpg and hp suggest a curve, so we might want to investigate
+a polynomial relation there.
+
+```{r}
+pairs(autompg)
+```
+
+
+```{r}
+mpg_hp <- lm(mpg ~ hp, data = autompg)
+
+par(mfrow = c(1, 2))
+plot(mpg ~ hp, data = autompg, col = "grey", pch = 20,
+     cex = 1.5)
+abline(mpg_hp, col = "darkorange", lwd = 2)
+
+plot(mpg_hp$fitted.values, mpg_hp$residuals, 
+     col = "grey", pch = 20,
+     xlab = "Fitted", ylab = "Residuals",
+     cex = 1.5, main = "Fitted vs Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+
+```
+
+We fix the mean issue first by adding a quadratic term
+
+```{r}
+mpg_hp_quad <- lm(mpg ~ hp + I(hp^2), data = autompg)
+
+par(mfrow = c(1, 2))
+plot(mpg ~ hp, data = autompg, col = "grey", pch = 20,
+     cex = 1.5)
+x_plot <- seq(min(autompg$hp), max(autompg$hp, by = 0.1))
+lines(x_plot, predict(mpg_hp_quad, 
+          newdata = data.frame(hp = x_plot)),
+      col = "darkorange", lwd = 2)
+
+plot(mpg_hp_quad$fitted.values, mpg_hp_quad$residuals, 
+     col = "grey", pch = 20,
+     xlab = "Fitted", ylab = "Residuals",
+     cex = 1.5, main = "Fitted vs Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+```
+
+Now we can fix the increasing variance issues with response transformation.
+
+```{r}
+mpg_hp_log <- lm(log(mpg) ~ hp + I(hp^2), data = autompg)
+
+par(mfrow = c(1, 2))
+plot(log(mpg) ~ hp, data = autompg, col = "grey", pch = 20,
+     cex = 1.5)
+x_plot <- seq(min(autompg$hp), max(autompg$hp, by = 0.1))
+lines(x_plot, predict(mpg_hp_log, 
+          newdata = data.frame(hp = x_plot)),
+      col = "darkorange", lwd = 2)
+
+plot(mpg_hp_log$fitted.values, mpg_hp_log$residuals, 
+     col = "grey", pch = 20,
+     xlab = "Fitted", ylab = "Residuals",
+     cex = 1.5, main = "Fitted vs Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+```
+
+What about a log transformation of the predictor?
+
+
+```{r}
+mpg_hp_loglog <- lm(log(mpg) ~ log(hp), data = autompg)
+
+par(mfrow = c(1, 2))
+plot(log(mpg) ~ log(hp), data = autompg, col = "grey", pch = 20,
+     cex = 1.5)
+x_plot <- seq(min(autompg$hp), max(autompg$hp, by = 0.1))
+abline(mpg_hp_loglog, col = "darkorange", lwd = 2)
+
+plot(mpg_hp_loglog$fitted.values, mpg_hp_loglog$residuals, 
+     col = "grey", pch = 20,
+     xlab = "Fitted", ylab = "Residuals",
+     cex = 1.5, main = "Fitted vs Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+```
+
+
+## Model Building?
+
+```{r}
+big_model <- lm(mpg ~ disp * hp * domestic, data = autompg)
+```
+
+```{r}
+qqnorm(big_model$residuals, main = "Normal Q-Q Plot", col = "darkgrey")
+qqline(big_model$residuals, col = "darkorange", lwd = 2)
+```
+
+```{r}
+bigger_model <- lm(log(mpg) ~ disp * hp * domestic +
+                  I(disp ^ 2) + I(hp ^ 2)
+                  , data = autompg)
+summary(bigger_model)
+```
+
+```{r}
+qqnorm(bigger_model$residuals, main = "Normal Q-Q Plot", col = "darkgrey")
+qqline(bigger_model$residuals, col = "darkorange", lwd = 2)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

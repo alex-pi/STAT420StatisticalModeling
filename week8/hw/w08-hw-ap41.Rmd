@@ -1,0 +1,692 @@
+---
+title: "Week 8 - Homework - STAT 420, Summer 2021"
+author: "Alejandro Pimentel (ap41)"
+date: ''
+output:
+  html_document: 
+    theme: readable
+    toc: yes  
+    code_folding: show
+  pdf_document: default
+urlcolor: cyan
+editor_options: 
+  chunk_output_type: console
+---
+
+```{css, echo=FALSE}
+p, li, td {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+```
+
+***
+
+*Utility functions defined here, click `Code` to see*
+
+```{r message=FALSE, warning=FALSE, class.source = 'fold-hide'}
+library(knitr)
+library(kableExtra)
+library(dplyr)
+
+format_numerics <- function(data, digits = 2, notation_threshold = 0.00001) {
+  # make sure is a data.frame, then format
+  if(!is.data.frame(data)){
+    data <- as.data.frame(data)
+  }  
+  data %>% 
+    mutate_if(
+      is.numeric, 
+      function(x) {
+        if_else(
+          abs(x) < notation_threshold, 
+          formatC(x, digits = digits, format = "e"), 
+          formatC(x, digits = digits, format = "f", drop0trailing = FALSE)
+        )
+      }
+    )
+}
+
+gen_kable <- function(table_data, add_row_names = TRUE, caption = "", col_names = c(), row_names = c()) {
+  f_data <- format_numerics(table_data) 
+  if(length(col_names) != 0){
+    colnames(f_data) <- col_names
+  }
+  if(length(row_names) != 0){
+    rownames(f_data) <- row_names
+  }  
+  f_data %>%
+  kable(., format = "html", row.names = add_row_names,
+        caption = caption, escape = FALSE) %>%
+    kable_styling(bootstrap_options = c("striped", "hover"),
+                  full_width = F,
+                  font_size = 14,
+                  position = "center")
+}
+
+```
+
+```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
+options(scipen = 1, digits = 4, width = 80, fig.alin = "center")
+```
+
+## Exercise 1 (Writing Functions)
+
+**(a)** Write a function named `diagnostics` that takes as input the arguments:
+
+- `model`, an object of class `lm()`, that is a model fit via `lm()`
+- `pcol`, for controlling point colors in plots, with a default value of `grey`
+- `lcol`, for controlling line colors in plots, with a default value of `dodgerblue`
+- `alpha`, the significance level of any test that will be performed inside the function, with a default value of `0.05`
+- `plotit`, a logical value for controlling display of plots with default value `TRUE`
+- `testit`, a logical value for controlling outputting the results of tests with default value `TRUE`
+
+The function should output:
+
+- A list with two elements when `testit` is `TRUE`:
+    - `p_val`, the p-value for the Shapiro-Wilk test for assessing normality
+    - `decision`, the decision made when performing the Shapiro-Wilk test using the `alpha` value input to the function. "Reject" if the null hypothesis is rejected, otherwise "Fail to Reject."
+- Two plots, side-by-side, when `plotit` is `TRUE`:
+    - A fitted versus residuals plot that adds a horizontal line at $y = 0$, and labels the $x$-axis "Fitted" and the $y$-axis "Residuals." The points and line should be colored according to the input arguments. Give the plot a title. 
+    - A Normal Q-Q plot of the residuals that adds the appropriate line using `qqline()`. The points and line should be colored according to the input arguments. Be sure the plot has a title. 
+
+Consider using this function to help with the remainder of the assignment as well.
+
+**Solution**
+
+```{r, message = FALSE, warning = FALSE}
+library(lmtest)
+diagnostics <- function(model, pcol = "grey", lcol = "dodgerblue",
+                        alpha = 0.05, plotit = TRUE, testit = TRUE,
+                        detailed = FALSE) {
+
+  diags <- NULL
+  if(testit) {
+    p_val_st <- shapiro.test(model$residuals)$p.value
+    p_val_bp <- bptest(model)$p.value
+    hval <- hatvalues(model)
+    cookd <- cooks.distance(model)
+    diags <- list(
+     "p_val" = p_val_st,
+     "decision" = ifelse(p_val_st < alpha, "Reject", "Fail to Reject")
+    )
+    # Extending the function to add more diagnostics
+    if(detailed) {
+      diags$leverage <- list(
+       "values" = hval,
+       "large" = hval > 2 * mean(hval))
+      diags$bptest <- list(
+      "p_val" = p_val_bp,
+      "decision" = ifelse(p_val_bp < alpha, "Reject", "Fail to Reject"))
+      diags$cookd <- list(
+       "values" = cookd,
+       "influential" = cookd[cookd > 4 / length(cookd)])
+    }
+  } 
+  
+  if(plotit) {
+    par(mfrow = c(1, 2), bg="ghostwhite")
+    plot(model$fitted.values, model$residuals,  
+         col = pcol, pch = 20,
+         xlab = "Fitted", ylab = "Residuals",
+         main = "Fitted vs Residuals")
+    abline(h = 0, col = lcol, lwd = 2)
+    qqnorm(model$residuals, main = "Normal Q-Q Plot", 
+           col = pcol)
+    qqline(model$residuals, col = lcol, lwd = 2)
+  }
+  diags
+}
+```
+
+
+**(b)** Run the following code.
+
+**Solution**
+
+```{r}
+set.seed(40)
+
+data_1 = data.frame(x = runif(n = 30, min = 0, max = 10),
+                    y = rep(x = 0, times = 30))
+data_1$y = with(data_1, 2 + 1 * x + rexp(n = 30))
+fit_1 = lm(y ~ x, data = data_1)
+
+data_2 = data.frame(x = runif(n = 20, min = 0, max = 10),
+                    y = rep(x = 0, times = 20))
+data_2$y = with(data_2, 5 + 2 * x + rnorm(n = 20))
+fit_2 = lm(y ~ x, data = data_2)
+
+data_3 = data.frame(x = runif(n = 40, min = 0, max = 10),
+                    y = rep(x = 0, times = 40))
+data_3$y = with(data_3, 2 + 1 * x + rnorm(n = 40, sd = x))
+fit_3 = lm(y ~ x, data = data_3)
+```
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+diagnostics(fit_1, plotit = FALSE)$p_val
+diagnostics(fit_2, plotit = FALSE)$decision
+# No diagnostics run so it returns NULL
+diagnostics(fit_1, testit = FALSE, pcol = "black", lcol = "black")
+# No diagnostics run so it returns NULL
+diagnostics(fit_2, testit = FALSE, pcol = "grey", lcol = "green")
+diagnostics(fit_3)
+```
+
+***
+
+## Exercise 2 (Prostate Cancer Data)
+
+For this exercise, we will use the `prostate` data, which can be found in the `faraway` package. After loading the `faraway` package, use `?prostate` to learn about this dataset.
+
+```{r, message = FALSE, warning = FALSE}
+library(faraway)
+#str(prostate)
+```
+
+**(a)** Fit an additive multiple regression model with `lpsa` as the response and the remaining variables in the `prostate` dataset as predictors. Report the $R^2$ value for this model.
+
+**Solution**
+
+```{r}
+pros_add <- lm(lpsa ~ ., data = prostate)
+
+(r2 <- summary(pros_add)$r.squared)
+```
+
+$R^2 = `r r2`$
+
+**(b)** Check the constant variance assumption for this model. Do you feel it has been violated? Justify your answer.
+
+**Solution**
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+diags <- diagnostics(pros_add, pcol = "grey", lcol = "darkorange",
+                     detailed = TRUE)
+
+p_val_bpt <- diags$bptest$p_val
+```
+
+The constant variance assumption doesn't seem to be violated:
+
+- The `Fitted vs Residuals` plot shows that the variance of the residuals remains fairly constant.
+- The `Q-Q Plot` looks somewhat reasonable, the tails show some deviation but is not very extreme.
+- The `p-value` of a `BP Test` is high: **`r p_val_bpt`**, so we would `FTR Reject` the constant variance hypothesis for any reasonable $\alpha$.
+
+**(c)** Check the normality assumption for this model. Do you feel it has been violated? Justify your answer.
+
+**Solution**
+
+The `Normality Assuption` doesn't seem to be violated. 
+
+- We can see that a `histogram` of the residuals somehow resembles a `standard normal distribution`. But it is certainly not very clear just with a `histogram`.
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+par(mfrow = c(1, 1), bg="ghostwhite")
+hist(resid(pros_add),
+     xlab = "Residuals",
+     main = "Histogram of residuals, additive model",
+     col = "darkorange",
+     border = "dodgerblue",
+     breaks = 20)
+```
+
+- The `QQ plot` above, Ex 2 (b), seems to show some mild deviations. But it doesn't look extreme.
+
+```{r}
+diags$p_val
+```
+
+- We also obtained a high `p-value` of **`r diags$p_val`**. For a reasonable $\alpha$ we would `Fail to Reject` the `Normality Hypothesis`.
+
+
+**(d)** Check for any high leverage observations. Report any observations you determine to have high leverage.
+
+**Solution**
+
+```{r}
+lev_2mean <- mean(diags$leverage$values) * 2
+```
+
+We take as cutting point *2 times the average of the `hat values`*. In this case: **`r lev_2mean`**.
+
+With that, we found the following `high leverage` observations:
+
+```{r}
+diags$leverage$values[diags$leverage$large]
+# Save the indexes for later.
+large_lev_idx <- unname(which(diags$leverage$large))
+```
+
+**(e)** Check for any influential observations. Report any observations you determine to be influential.
+
+**Solution**
+
+Using the heuristic:
+
+$$
+\text{ cook distance } > 4 / n
+$$
+where $n$ is the number of observations. We found the following influential points:
+
+```{r}
+diags$cookd$influential
+# Get the indexes of the influential points
+influe_idx <- as.numeric(names(diags$cookd$influential))
+```
+
+**(f)** Refit the additive multiple regression model without any points you identified as influential. Compare the coefficients of this fitted model to the previously fitted model.
+
+```{r}
+# Fit model based on the indexes excluding those for influential
+# points.
+pros_add_fix <- lm(lpsa ~ ., data = prostate, 
+    subset = !(1:nrow(prostate) %in% influe_idx))
+
+```
+
+*Full model's coefficients.*
+
+```{r}
+pros_add$coefficients
+```
+
+*Coefficients for model without influential points.*
+
+```{r}
+pros_add_fix$coefficients
+```
+
+The `intercept` $\beta_0$ seems to be the only one with considerable difference.
+
+We can also see if the `Q-Q Plot` shows some improvement.
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+diags <- diagnostics(pros_add_fix, pcol = "grey", lcol = "darkorange",
+                     testit = FALSE)
+```
+
+The tail on the right side perhaps improved a bit, but not the one on the left side. It doesn't look like removing the influence points improves our model.
+
+**(g)** Create a data frame that stores the observations that were "removed" because they were influential. Use the two models you have fit to make predictions with these observations. Comment on the difference between these two sets of predictions.
+
+**Solution**
+
+Predictions when influential points are **included**:
+
+```{r}
+(pred_pros_add <- pros_add$fitted.values[influe_idx])
+```
+
+Predictions when influential points are **excluded**:
+
+```{r}
+(pred_pros_fix <- predict(pros_add_fix, newdata = prostate[influe_idx, ]))
+```
+
+```{r}
+sse_add <- sum((prostate$lpsa[influe_idx] - pred_pros_add) ^ 2)
+
+sse_fix <- sum((prostate$lpsa[influe_idx] - pred_pros_fix) ^ 2)
+```
+
+After removing the influential points and try to make predictions with those observations, the `Sum of Squared Error` is **`r sse_fix`**, that is bigger compared to the case when we include the influential points to train the model: **`r sse_add`**.
+
+In other words, the `model` trained without the `influential points` is making less accurate predictions on those points.
+
+***
+
+## Exercise 3 (Why Bother?)
+
+**Why** do we care about violations of assumptions? One key reason is that the distributions of the parameter estimators that we have used are all reliant on these assumptions. When the assumptions are violated, the distributional results are not correct, so our tests are garbage. **Garbage In, Garbage Out!**
+
+Consider the following setup that we will use for the remainder of the exercise. We choose a sample size of 50.
+
+```{r}
+n = 50
+set.seed(420)
+x_1 = runif(n, 0, 5)
+x_2 = runif(n, -2, 2)
+```
+
+Consider the model,
+
+\[
+Y = 4 + 1 x_1 + 0 x_2 + \epsilon.
+\]
+
+That is,
+
+- $\beta_0$ = 4
+- $\beta_1$ = 1
+- $\beta_2$ = 0
+
+We now simulate `y_1` in a manner that does **not** violate any assumptions, which we will verify. In this case $\epsilon \sim N(0, 1).$
+
+```{r}
+set.seed(83)
+library(lmtest)
+y_1 = 4 + 1 * x_1 + 0 * x_2 + rnorm(n = n, mean = 0, sd = 1)
+fit_1 = lm(y_1 ~ x_1 + x_2)
+bptest(fit_1)
+```
+
+Then, we simulate `y_2` in a manner that **does** violate assumptions, which we again verify. In this case $\epsilon \sim N(0, \sigma = |x_2|).$
+
+```{r}
+set.seed(83)
+y_2 = 4 + 1 * x_1 + 0 * x_2 + rnorm(n = n, mean = 0, sd = abs(x_2))
+fit_2 = lm(y_2 ~ x_1 + x_2)
+bptest(fit_2)
+```
+
+**(a)** Use the following code after changing `birthday` to your birthday.
+
+**Solution**
+
+```{r}
+num_sims = 2500
+p_val_1 = rep(0, num_sims)
+p_val_2 = rep(0, num_sims)
+birthday = 19820426
+set.seed(birthday)
+```
+
+Repeat the above process of generating `y_1` and `y_2` as defined above, and fit models with each as the response `2500` times. Each time, store the p-value for testing,
+
+\[
+\beta_2 = 0,
+\]
+
+using both models, in the appropriate variables defined above. (You do not need to use a data frame as we have in the past. Although, feel free to modify the code to instead use a data frame.)
+
+```{r}
+
+for (i in 1:num_sims) {
+  # Fitting model with no violations
+  y_1 <- 4 + 1 * x_1 + 0 * x_2 + rnorm(n = n, mean = 0, sd = 1)
+  fit_1 <- lm(y_1 ~ x_1 + x_2)
+  p_val_1[i] <- summary(fit_1)$coef[3, "Pr(>|t|)"] 
+  
+  # Fitting model with violations (variance is not constant)
+  y_2 <- 4 + 1 * x_1 + 0 * x_2 + rnorm(n = n, mean = 0, sd = abs(x_2))
+  fit_2 <- lm(y_2 ~ x_1 + x_2)
+  p_val_2[i] <- summary(fit_2)$coef[3, "Pr(>|t|)"]
+}
+```
+
+
+**(b)** What proportion of the `p_val_1` values is less than 0.01? Less than 0.05? Less than 0.10? What proportion of the `p_val_2` values is less than 0.01? Less than 0.05? Less than 0.10? Arrange your results in a table. Briefly explain these results.
+
+**Solution**
+
+```{r}
+table_data <- data.frame(
+  row.names = c("alpha=0.01", "alpha=0.05", "alpha=0.10"),
+  "Without violations" = c(mean(p_val_1 < 0.01),
+                            mean(p_val_1 < 0.05),
+                            mean(p_val_1 < 0.10)),
+  "With violations" = c(mean(p_val_2 < 0.01),
+                            mean(p_val_2 < 0.05),
+                            mean(p_val_2 < 0.10))
+)
+
+gen_kable(table_data, 
+          col_names = c("Without violations", "With violations"),
+          caption = "Ratio of Rejections of Null Hypothesis, beta_2 = 0")
+
+```
+
+We know from our true model that $\beta_2 = 0$, so from a simulation we expect to `Fail to Reject` the `Null Hypothesis` most of the time for a reasonable $\alpha$. In other words we expect a low ratio of `Rejections` of the `Null Hypothesis`.
+
+In the model with **no violations of the assumptions**, we see that $\alpha$ is aligned with the ration of rejections, which is expected.
+
+**That is not happening in the other model**, where the constant variance assumption was violated. The ratio of `Rejections` is higher. *This would clearly affect our capacity to decide whether the associated predictor is relevant or not.*
+
+***
+
+## Exercise 4 (Corrosion Data)
+
+For this exercise, we will use the `corrosion` data, which can be found in the `faraway` package. After loading the `faraway` package, use `?corrosion` to learn about this dataset.
+
+```{r, message = FALSE, warning = FALSE}
+library(faraway)
+```
+
+**(a)** Fit a simple linear regression with `loss` as the response and `Fe` as the predictor. Plot a scatter plot and add the fitted line. Check the assumptions of this model.
+
+**Solution**
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+par(mfrow=c(1, 1), bg="ghostwhite")
+slr_mod <- lm(loss ~ Fe, data = corrosion)
+
+plot(loss ~ Fe, data = corrosion, col = "gray", pch = 20,
+     main = "Weight loss vs. Iron content",
+     ylab = "Weight loss (mg)",
+     xlab = "% of Iron content")
+abline(slr_mod, col = "darkorange", lwd = 3)
+```
+
+From the graphs below, it is hard to tell if the assumptions are being violated since we have a very small data set. From the `Fitted vs Residuals` plot one could argue that the `residuals` don't look centered at `0`.
+
+```{r fig.height = 4, fig.width = 7, fig.align = "center"}
+diags <- diagnostics(slr_mod, pcol = "grey", lcol = "darkorange",
+                     detailed = TRUE)
+```
+
+```{r}
+p_val_bp <- diags$bptest$p_val
+
+p_val_sha <- diags$p_val
+```
+
+We can do some extra analysis with the tests.
+
+*Assumptions.*
+
+- `Normality`. We get a high `p-value` in the `shapiro` test of **`r p_val_sha`**. Despite this test, we can see some deviation in the `Q-Q plot`.
+- `Constant Variance`. We get a high `p-value` in the `BP` test of **`r p_val_bp`**. Again, focusing on the `Fitted vs Residuals` plot we can see some points with higher variance than the rest.
+- `Linearity`. The residuals do not appeared to be centered at `0`.
+
+Perhaps looking into the `form` of the model will give us some light on this.
+
+**(b)** Fit higher order polynomial models of degree 2, 3, and 4. For each, plot a fitted versus residuals plot and comment on the constant variance assumption. Based on those plots, which of these three models do you think are acceptable? Use a statistical test(s) to compare the models you just chose. Based on the test, which is preferred? Check the normality assumption of this model. Identify any influential observations of this model.
+
+**Solution**
+
+**Degree 2 polynomial**
+
+The variance in this `model` seems to be much higher for a few points, even though we have a small data set we could argue that the variance is changing.
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+d2_mod <- lm(loss ~ Fe + I(Fe^2), data = corrosion)
+
+diags_d2 <- diagnostics(d2_mod, pcol = "grey", lcol = "darkorange")
+
+```
+
+The `Sum of Squared Error` for this model is **`r sum(resid(d2_mod)^2)`**
+
+**Degree 3 polynomial**
+
+Here the variance of the residuals seems centered and arguably constant. The `Q-Q Plot` also looks better compared the quadratic model. 
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+d3_mod <- lm(loss ~ Fe + I(Fe^2) + I(Fe^3), data = corrosion)
+
+diags_d3 <- diagnostics(d3_mod, pcol = "grey", lcol = "darkorange", detailed = TRUE)
+
+```
+
+The `Sum of Squared Error` for this model is much smaller that in the previous quadratic model: **`r sum(resid(d3_mod)^2)`**
+
+**Degree 4 polynomial**
+
+The variance again seems a bit off. Perhaps not as much as it did for the `quadratic` model. The `Q-Q Plot` seems also acceptable.
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+d4_mod <- lm(loss ~ Fe + I(Fe^2) + I(Fe^3) + I(Fe^4), data = corrosion)
+
+diags_d4 <- diagnostics(d4_mod, pcol = "grey", lcol = "darkorange")
+
+```
+
+The `Sum of Squared Error` for this model is much smaller that in the previous quadratic model: **`r sum(resid(d4_mod)^2)`**. This is natural as we are adding an extra higher order predictor. At this point we might be over fitting our model.
+
+`Degree 3` and `Degree 4` are acceptable models. We can do an statistical test between these 2. Here we use $\alpha = 0.01$
+
+```{r}
+# We use the p-value of the quartic term instead of an anova, which would be equivalent 
+(test_result <- ifelse(summary(d4_mod)$coef[5, 4] < 0.01, "Reject the Null Hypothesis", "FTR the Null Hypothesis"))
+```
+
+The `degree 4` predictor is not relevant according to our test. Given that, in this case we prefer the the `cubic model` `d3_mod`:
+
+$$
+Y_i = \beta_0 + \beta_1x_i + \beta_2x_i^2 + \beta_3x_i^3 + \epsilon_i
+$$
+
+**More details on the cubic model**
+
+Here is a graph of how the `cubic` model fits the data.
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+graph_poly <- function(model, degree = 2) {
+  par(mfrow=c(1, 1), bg="ghostwhite")
+  plot(loss ~ Fe, data = corrosion, col = "grey", pch = 20,
+        main = paste("Weight Loss vs Iron content (Degree",  degree, ")"),
+        ylab = "Weight loss (mg)",
+        xlab = "% of Iron content",     
+        cex = 1.5)
+  x_plot <- seq(min(corrosion$Fe), max(corrosion$Fe), by = 0.01)
+  lines(x_plot, predict(model, 
+          newdata = data.frame(Fe = x_plot)),
+        col = "darkorange", lwd = 2)
+  
+}
+
+graph_poly(d3_mod, degree = 3)
+```
+
+The `normality assumption` doesn't seem to be violated. The `p-value` is **r diags_d3$p_val`**. *We must considered that this data set is very small, the tests might not be very accurate.*
+
+Cook's distances for the `cubic model` are:
+
+```{r}
+diags_d3$cookd$values
+```
+
+No influential points were found with the heuristic:
+
+$$
+\text{ cook distance } > 4 / n
+$$
+
+```{r}
+diags_d3$cookd$influential
+```
+
+
+***
+
+## Exercise 5 (Diamonds)
+
+The data set `diamonds` from the `ggplot2` package contains prices and characteristics of 54,000 diamonds. For this exercise, use `price` as the response variable $y$, and `carat` as the predictor $x$. Use `?diamonds` to learn more.
+
+```{r, message = FALSE, warning = FALSE}
+library(ggplot2)
+```
+
+**(a)** Fit a linear model with `price` as the response variable $y$, and `carat` as the predictor $x$. Return the summary information of this model.
+
+**Solution**
+
+```{r}
+slr_mod <- lm(price ~ carat, data = diamonds)
+summary(slr_mod)
+```
+
+**(b)** Plot a scatterplot of price versus carat and add the line for the fitted model in part **(a)**. Using a fitted versus residuals plot and/or a Q-Q plot, comment on the diagnostics. 
+
+**Solution**
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+
+par(mfrow=c(1, 1), bg="ghostwhite")
+plot(price ~ carat, data = diamonds, col = "gray", pch = 20,
+     main = "Price vs. Carat",
+     ylab = "Price (US dollars)",
+     xlab = "Carat (Weight)")
+abline(slr_mod, col = "darkorange", lwd = 3)
+```
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+diags_slr <- diagnostics(slr_mod, pcol = "grey", lcol = "darkorange", 
+                     testit = FALSE)
+```
+
+
+- The `Fitted vs Residuals` plot shows a pattern in the variance of the residuals. The `Equal Variance Assumption` seems to be violated.
+- The residuals are not centered at '0' so there is doubt about the linear relation between `price` and `carat`.
+- The `Q-Q plot` also shows that the residuals density doesn't necessarily increase close to '0'. We see that in the `tails` of the plot, which have a deviation from the line.
+
+**(c)** Seeing as the price stretches over several orders of magnitude, it seems reasonable to try a log transformation of the response. Fit a model with a logged response, plot a scatterplot of log-price versus carat and add the line for the fitted model, then use a fitted versus residuals plot and/or a Q-Q plot to comment on the diagnostics of the model.
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+par(mfrow = c(1, 1), bg="ghostwhite")
+qplot(price, data = diamonds, bins = 30,
+      xlab = "Price (USD)",
+      main = "Histogram of prices")
+```
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+
+par(mfrow=c(1, 1), bg="ghostwhite")
+log_mod <- lm(log(price) ~ carat, data = diamonds)
+plot(log(price) ~ carat, data = diamonds, col = "gray", pch = 20,
+     main = "log scaled Price vs. Carat",
+     ylab = "log scaled Price",
+     xlab = "Carat (Weight)")
+abline(log_mod, col = "darkorange", lwd = 3)
+```
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+diags_log <- diagnostics(log_mod, pcol = "grey", lcol = "darkorange", 
+                     testit = FALSE)
+```
+
+- The `Fitted vs Residuals` plot shows that the `Equal Variance` assumption improved, but there is still a clear violation.
+- The same can be said about `Linearity` and `Normality`, so we still need to re asses our model.
+
+**(d)** Try adding log transformation of the predictor. Fit a model with a logged response and logged predictor, plot a scatterplot of log-price versus log-carat and add the line for the fitted model, then use a fitted versus residuals plot and/or a Q-Q plot to comment on the diagnostics of the model.
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+
+par(mfrow=c(1, 1), bg="ghostwhite")
+loglog_mod <- lm(log(price) ~ log(carat), data = diamonds)
+plot(log(price) ~ log(carat), data = diamonds, col = "gray", pch = 20,
+     main = "log Price vs. log Carat",
+     ylab = "log Price",
+     xlab = "log Carat")
+abline(loglog_mod, col = "darkorange", lwd = 3)
+```
+
+```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
+diags_loglog <- diagnostics(loglog_mod, pcol = "grey", lcol = "darkorange", 
+                     testit = FALSE)
+```
+
+- The `Fitted vs Residuals` plot shows that the `Equal Variance` assumption improved even more compared to the previous model, but it is far from perfect.
+- For `Normality`, the tails in the `Q-Q plot` are much smaller. But the deviation is still considerable.
+- The residuals also seem to be closer to be centered at `0`.
+
+Although using a `log` transformation in both, the `response` and the `predictor` improved the model considerably, for this particular data, seems like we should also include other predictors and transformations.
+
+**(e)** Use the model from part **(d)** to predict the price (in dollars) of a 3-carat diamond. Construct a 99% prediction interval for the price (in dollars).
+
+```{r}
+
+exp(predict(loglog_mod, level = 0.99, interval = "prediction",
+        newdata = data.frame(carat = 3)))
+```
+

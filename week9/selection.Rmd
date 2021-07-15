@@ -1,0 +1,233 @@
+---
+title: "selection"
+author: "AP"
+date: "7/14/2021"
+output: html_document
+---
+
+$$
+\text{AIC} = n\log\left(\frac{\text{RSS}}{n}\right) + 2p
+$$
+$$
+\text{BIC} = n\log\left(\frac{\text{RSS}}{n}\right) + \log(n)p
+$$
+
+
+
+$$
+R_a^2 = 1 - \frac{\text{SSE}/(n-p)}{\text{SST}/(n-1)} = 1 - \left(  \frac{n-1}{n-p} \right)(1-R^2)
+$$
+
+## Data
+
+```{r, fig.height=8, fig.width=8}
+library(faraway)
+pairs(seatpos, col = "dodgerblue")
+```
+
+```{r}
+hipcenter_mod = lm(hipcenter ~ ., data = seatpos)
+coef(hipcenter_mod)
+```
+
+
+```{r}
+vif(hipcenter_mod)
+```
+
+# Exhaustive Search
+
+```{r}
+library(leaps)
+all_hipcenter_mod = summary(regsubsets(hipcenter ~ ., data = seatpos))
+```
+
+```{r}
+all_hipcenter_mod
+```
+Here:
+
+1) is the model with only one predictor with lowest RSS
+2) is the model with only two predictors with lowest RSS
+etc
+
+```{r}
+all_hipcenter_mod$which
+```
+
+Among those, the model with the most predictors will have the lowest RSS. So instead of using RSS to decide, we need to penalize the size of the model.
+
+```{r}
+all_hipcenter_mod$rss
+```
+
+```{r}
+all_hipcenter_mod$adjr2
+```
+
+When using `Adjusted R^2` we want the max value. 
+
+```{r}
+(best_r2_ind <- which.max(all_hipcenter_mod$adjr2))
+```
+
+```{r}
+all_hipcenter_mod$which[best_r2_ind, ]
+```
+
+## AIC
+
+```{r}
+p = length(coef(hipcenter_mod))
+n = length(resid(hipcenter_mod))
+```
+
+```{r}
+(hipcenter_mod_aic = n * log(all_hipcenter_mod$rss / n) + 2 * (2:p))
+```
+
+With AIC model 3 is also selected.
+
+```{r}
+(best_aic_ind = which.min(hipcenter_mod_aic))
+all_hipcenter_mod$which[best_aic_ind,]
+```
+
+```{r}
+hipcenter_mod_best_aic = lm(hipcenter ~ Age + Ht + Leg, data = seatpos)
+```
+
+4 here is the number of parameters $p$ or predictors + 1.
+
+```{r}
+extractAIC(hipcenter_mod_best_aic)
+```
+
+
+```{r}
+plot(hipcenter_mod_aic ~ I(2:p), ylab = "AIC", xlab = "p, number of parameters", 
+     pch = 20, col = "dodgerblue", type = "b", cex = 2,
+     main = "AIC vs Model Complexity")
+```
+
+## BIC
+
+```{r}
+(hipcenter_mod_bic = n * log(all_hipcenter_mod$rss / n) + log(n) * (2:p))
+```
+
+BIC select the model with one predictor (2 parameters)
+
+```{r}
+which.min(hipcenter_mod_bic)
+```
+
+```{r}
+all_hipcenter_mod$which[1,]
+```
+
+```{r}
+hipcenter_mod_best_bic = lm(hipcenter ~ Ht, data = seatpos)
+```
+
+```{r}
+plot(hipcenter_mod_bic ~ I(2:p), ylab = "BIC", xlab = "p, number of parameters", 
+     pch = 20, col = "dodgerblue", type = "b", cex = 2,
+     main = "BIC vs Model Complexity")
+```
+
+# Backward AIC
+
+We provide our full model to the step function. It does the following:
+
+1) Gives RSS and AIC for the full mode <none> entry, and every possible model when removing one of the predictors.
+
+For instance, removing `Ht` gives us the smallest AIC.
+
+2) The next step is the same as above but with `Ht` out of the picture.
+
+3) It stops when removing any of the predictors on a given step, doesn't give a lower AIC.
+
+```{r}
+hipcenter_mod_back_aic = step(hipcenter_mod, direction = "backward")
+```
+
+The step function returns the model with lowest AIC.
+
+```{r}
+coef(hipcenter_mod_back_aic)
+```
+
+step uses `extractAIC()` function.
+
+$$
+\text{AIC} = n\log\left(\frac{\text{RSS}}{n}\right) + 2p,
+$$
+
+```{r}
+extractAIC(hipcenter_mod_back_aic)
+p <- length(hipcenter_mod_back_aic$coefficients)
+n <- nrow(seatpos)
+
+n * log(mean(hipcenter_mod_back_aic$residuals ^ 2)) + 2 * p
+```
+
+# Backward BIC
+
+It works the same but now the penalty coefficient that multiplies p is $log(n)$
+
+```{r}
+n <- nrow(seatpos)
+hipcenter_mod_back_bic = step(hipcenter_mod, direction = "backward", k = log(n))
+```
+```{r}
+coef(hipcenter_mod_back_bic)
+```
+
+```{r}
+summary(hipcenter_mod)$adj.r.squared
+## [1] 0.6000855
+summary(hipcenter_mod_back_aic)$adj.r.squared
+## [1] 0.6531427
+summary(hipcenter_mod_back_bic)$adj.r.squared
+## [1] 0.6244149
+```
+
+## Forward AIC
+
+When `<none>` reaches the top, adding predictors won't give a smaller AIC.
+
+```{r}
+
+hipcenter_mod_start = lm(hipcenter ~ 1, data = seatpos)
+hipcenter_mod_forw_aic = step(
+  hipcenter_mod_start, 
+  # Max possible model
+  scope = hipcenter ~ Age + Weight + HtShoes + Ht + Seated + Arm + Thigh + Leg, 
+  direction = "forward")
+```
+
+# Forward BIC
+
+```{r}
+hipcenter_mod_forw_bic = step(
+  hipcenter_mod_start, 
+  scope = hipcenter ~ Age + Weight + HtShoes + Ht + Seated + Arm + Thigh + Leg, 
+  direction = "forward", k = log(n))
+```
+## Stepwise AIC
+
+It adds and remove one variable at every step.
+
+Since out initial model only has the Intercept, the first step has nothing to remove.
+
+```{r}
+hipcenter_mod_both_aic = step(
+  hipcenter_mod_start, 
+  scope = hipcenter ~ Age + Weight + HtShoes + Ht + Seated + Arm + Thigh + Leg, 
+  direction = "both")
+```
+
+
+
+
