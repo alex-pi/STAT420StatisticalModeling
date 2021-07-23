@@ -118,7 +118,7 @@ speed_grid <- seq(min(cars$speed), max(cars$speed), 0.01)
 
 dist_ci_bad <- predict(stop_dist_model, 
                        newdata = data.frame(speed = speed_grid),
-                       interval = c("confidence"), level = 0.99)
+                       interval = c("confidence"), level = 0.9)
 
 dist_pi_bad <- predict(stop_dist_model, 
                        newdata = data.frame(speed = speed_grid),
@@ -140,8 +140,8 @@ lines(speed_grid, dist_ci_bad[, "lwr"], col = "dodgerblue", lwd = 3, lty = 2)
 lines(speed_grid, dist_ci_bad[, "upr"], col = "dodgerblue", lwd = 3, lty = 2)
 
 # Note that the Prediction Band contain 99% of the observed data points
-lines(speed_grid, dist_pi_bad[, "lwr"], col = "dodgerblue", lwd = 3, lty = 3)
-lines(speed_grid, dist_pi_bad[, "upr"], col = "dodgerblue", lwd = 3, lty = 3)
+lines(speed_grid, dist_pi_bad[, "lwr"], col = "red", lwd = 3, lty = 3)
+lines(speed_grid, dist_pi_bad[, "upr"], col = "red", lwd = 3, lty = 3)
 
 points(mean(cars$speed), mean(cars$dist), pch = "+", cex = 3)
 

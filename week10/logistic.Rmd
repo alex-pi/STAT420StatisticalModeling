@@ -1,0 +1,370 @@
+---
+title: "logistic"
+author: "AP"
+date: "7/19/2021"
+output: html_document
+---
+
+The `noise` follows a binomial distribution.
+
+```{r}
+sim_logistic_data = function(sample_size = 25, beta_0 = -2, beta_1 = 3) {
+  x = rnorm(n = sample_size)
+  eta = beta_0 + beta_1 * x
+  p = 1 / (1 + exp(-eta))
+  y = rbinom(n = sample_size, size = 1, prob = p)
+  data.frame(y, x)
+}
+```
+
+$$
+\log\left(\frac{p({\bf x})}{1 - p({\bf x})}\right) = -2 + 3 x
+$$
+$$
+\begin{aligned}
+Y_i \mid {\bf X_i} = {\bf x_i} &\sim \text{Bern}(p_i) \\
+p_i &= p({\bf x_i}) = \frac{1}{1 + e^{-\eta({\bf x_i})}} \\
+\eta({\bf x_i}) &= -2 + 3 x_i
+\end{aligned}
+$$
+```{r}
+set.seed(1)
+example_data = sim_logistic_data()
+head(example_data)
+```
+In a lot of ways, lm() is just a more specific version of glm().
+
+By default, glm() uses family = gaussian argument. That is, we’re fitting a GLM with a normally distributed response and the identity function as the link.
+
+```{r}
+# ordinary linear regression
+fit_lm  = lm(y ~ x, data = example_data)
+# logistic regression
+fit_glm = glm(y ~ x, data = example_data, family = binomial)
+```
+
+```{r}
+# more detailed call to glm for logistic regression
+fit_glm = glm(y ~ x, data = example_data, family = binomial(link = "logit"))
+```
+
+```{r}
+fit_glm$coefficients
+```
+
+$$
+\large
+\hat\eta ({\bf x}) = -2.3 + 3.7x
+$$
+```{r}
+predict(fit_glm, newdata = data.frame(x = 1.2), type = "link")
+```
+
+$$
+\hat{p}({\bf x}) = \frac{e^{\hat{\eta}({\bf x})}}{1 + e^{\hat{\eta}({\bf x})}} = \frac{1}{1 + e^{-\hat{\eta}({\bf x})}}
+$$
+
+This is the estimate of the probability that $Y$ is 1 given that $x=1.2$
+
+```{r}
+predict(fit_glm, newdata = data.frame(x = 1.2), type = "response")
+```
+
+```{r}
+plot(y ~ x, data = example_data, 
+     pch = 20, ylab = "Estimated Probability", 
+     main = "Ordinary vs Logistic Regression")
+grid()
+abline(fit_lm, col = "darkorange")
+curve(predict(fit_glm, data.frame(x), type = "response"), 
+      add = TRUE, col = "dodgerblue", lty = 2)
+legend("topleft", c("Ordinary", "Logistic", "Data"), lty = c(1, 2, 0), 
+       pch = c(NA, NA, 20), lwd = 2, col = c("darkorange", "dodgerblue", "black"))
+```
+
+Try different models
+
+```{r}
+set.seed(42)
+# The intercept seems to have an effect in the proportion of 1s and 0s in the response
+# Positive intercept (2) will generate more data points with response 1.
+intercept <- 0
+# The larger in magnitud the slope is, the sharper the change of probaility from 0 to 1 is.
+# Same for negative, in that case it would be decrease of probability is sharper the mode negative the slope is.
+slope <- -2
+
+example_data <- sim_logistic_data(sample_size = 50, beta_0 = intercept, beta_1 = slope)
+
+fit_glm <- glm(y ~ x, data = example_data, family = binomial)
+
+fit_glm$coefficients
+```
+
+```{r}
+plot(y ~ x, data = example_data, 
+     pch = 20, ylab = "Probability", 
+     main = "True: Orange solid, Estimated: Blue, Dashed")
+grid()
+curve(predict(fit_glm, data.frame(x), type = "response"), 
+      add = TRUE, col = "dodgerblue", lty = 2)
+
+curve(boot::inv.logit(intercept + slope * x), 
+      add = TRUE, col = "darkorange", lty = 1)
+```
+
+An extreme example.
+
+```{r}
+set.seed(42)
+# The intercept seems to have an effect in the proportion of 1s and 0s in the response
+# Positive intercept (2) will generate more data points with response 1.
+intercept <- 10
+# The larger in magnitud the slope is, the sharper the change of probaility from 0 to 1 is.
+# Same for negative, in that case it would be decrease of probability is sharper the mode negative the slope is.
+slope <- -10
+
+example_data <- sim_logistic_data(sample_size = 50, beta_0 = intercept, beta_1 = slope)
+
+fit_glm <- glm(y ~ x, data = example_data, family = binomial)
+
+fit_glm$coefficients
+```
+
+```{r}
+plot(y ~ x, data = example_data, 
+     pch = 20, ylab = "Probability", 
+     main = "True: Orange solid, Estimated: Blue, Dashed")
+grid()
+curve(predict(fit_glm, data.frame(x), type = "response"), 
+      add = TRUE, col = "dodgerblue", lty = 2)
+
+curve(boot::inv.logit(intercept + slope * x), 
+      add = TRUE, col = "darkorange", lty = 1)
+```
+
+```{r}
+set.seed(1)
+example_data <- sim_logistic_data(sample_size = 50, beta_0 = 10, beta_1 = -10)
+fit_glm <- glm(y ~ x, data = example_data, family = binomial)
+```
+
+This time estimates look good.
+
+```{r}
+fit_glm$coefficients
+```
+
+```{r}
+set.seed(5)
+example_data <- sim_logistic_data(sample_size = 50, beta_0 = 10, beta_1 = -10)
+fit_glm <- glm(y ~ x, data = example_data, family = binomial)
+```
+
+```{r}
+fit_glm$coefficients
+```
+
+
+
+
+## SAheart exmaple
+
+```{r}
+library(bestglm)
+data("SAheart")
+```
+
+$$
+\log\left(\frac{P[\texttt{chd} = 1]}{1 - P[\texttt{chd} = 1]}\right) = \beta_0 + \beta_{\texttt{ldl}} x_{\texttt{ldl}}
+$$
+
+```{r}
+chd_mod_ldl = glm(chd ~ ldl, data = SAheart, family = binomial)
+plot(jitter(chd, factor = 0.1) ~ ldl, data = SAheart, pch = 20, 
+     ylab = "Probability of CHD", xlab = "Low Density Lipoprotein Cholesterol")
+grid()
+curve(predict(chd_mod_ldl, data.frame(ldl = x), type = "response"), 
+      add = TRUE, col = "dodgerblue", lty = 2)
+```
+In this case we have a z-value instead of a t value.
+
+```{r}
+coef(summary(chd_mod_ldl))
+```
+
+```{r}
+chd_mod_additive = glm(chd ~ ., data = SAheart, family = binomial)
+chd_mod_additive$coefficients
+```
+
+Our test would be.
+
+$$
+H_0: \beta_{\texttt{sbp}} = \beta_{\texttt{tobacco}} = \beta_{\texttt{adiposity}} = \beta_{\texttt{famhist}} = \beta_{\texttt{typea}} = \beta_{\texttt{obesity}} = \beta_{\texttt{alcohol}} = \beta_{\texttt{age}} = 0
+$$
+This gives the `test statistic`.
+
+```{r}
+-2 * as.numeric(logLik(chd_mod_ldl) - logLik(chd_mod_additive))
+```
+
+Seems like we prefer the larger model.
+
+```{r}
+anova(chd_mod_ldl, chd_mod_additive, test = "LRT")
+```
+
+Then we check if all predictors are really needed.
+
+```{r}
+chd_mod_selected = step(chd_mod_additive, trace = 0)
+coef(chd_mod_selected)
+```
+
+
+No we test for:
+
+$$
+H_0: \beta_{\texttt{sbp}} = \beta_{\texttt{adiposity}} = \beta_{\texttt{obesity}} = \beta_{\texttt{alcohol}} = 0
+$$
+```{r}
+anova(chd_mod_selected, chd_mod_additive, test = "LRT")
+```
+
+```{r}
+summary(chd_mod_selected)
+```
+
+### Confident Intervals
+
+`R` uses a method called `profile likelihood`
+
+```{r}
+confint(chd_mod_selected, level = 0.99)
+```
+
+If we want the Wald Confidence Interval we would do:
+
+$$
+\hat{\beta}_j \pm z_{\alpha/2} \cdot \text{SE}[\hat{\beta}_j].
+$$
+
+```{r}
+confint.default(chd_mod_selected, level = 0.99)
+```
+
+### Confidence Intervals for Mean Response
+
+We need to apply the inverse logit function.
+
+$$
+\left(\text{logit}^{-1}(\hat{\eta}({\bf x}) - z_{\alpha/2} \cdot \text{SE}[\hat{\eta}({\bf x})] ), \ \text{logit}^{-1}(\hat{\eta}({\bf x}) + z_{\alpha/2} \cdot \text{SE}[\hat{\eta}({\bf x})])\right)
+$$
+
+```{r}
+new_obs = data.frame(
+  sbp = 148.0,
+  tobacco = 5,
+  ldl = 12,
+  adiposity = 31.23,
+  famhist = "Present",
+  typea = 47,
+  obesity = 28.50,
+  alcohol = 23.89,
+  age = 60
+)
+```
+
+Tp simply get the prediction value between 0 and 1.
+
+```{r}
+predict(chd_mod_selected, new_obs, type = "response")
+```
+
+
+The `predict` function can return the `Standard Error`, $\text{SE}[\hat{\eta}({\bf x})]$
+
+```{r}
+eta_hat = predict(chd_mod_selected, new_obs, se.fit = TRUE, type = "link")
+eta_hat
+```
+
+The fit value is not between 0 and 1, so we need to apply the inverse logit.
+
+```{r}
+boot::inv.logit(eta_hat$fit)
+```
+
+
+But we still need an interval.
+
+```{r}
+z_crit = round(qnorm(0.975), 2)
+eta_hat$fit + c(-1, 1) * z_crit * eta_hat$se.fit
+```
+
+But to that we need to apply the logit inverse. Then values are between 0 and 1. This is because we called `predict` with `type = "link"`
+
+```{r}
+boot::inv.logit(eta_hat$fit + c(-1, 1) * z_crit * eta_hat$se.fit)
+```
+
+
+### Formula Syntax
+
+All the formula syntax we have been using applies here to. For instance below we add the interaction: `ldl:famhist`
+
+```{r}
+chd_mod_interaction = glm(chd ~ alcohol + ldl + famhist + typea + age + ldl:famhist, 
+                          data = SAheart, family = binomial)
+summary(chd_mod_interaction)
+```
+Adding a polynomial term.
+
+```{r}
+chd_mod_int_quad = glm(chd ~ alcohol + ldl + famhist + typea + age + ldl:famhist + I(ldl^2),
+                       data = SAheart, family = binomial)
+summary(chd_mod_int_quad)
+```
+
+### Deviance
+
+Deviance compares the model to a saturated model. (Without repeated observations, a saturated model is a model that fits perfectly, using a parameter for each observation.) Essentially, deviance is a generalized residual sum of squares for GLMs. Like RSS, deviance decreased as the model complexity increases
+
+```{r}
+deviance(chd_mod_ldl)
+deviance(chd_mod_selected)
+deviance(chd_mod_additive)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

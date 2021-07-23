@@ -12,7 +12,7 @@ library(faraway)
 pairs(seatpos, col = "dodgerblue")
 ```
 - A predictor with itself has perfect collinearity.
-- HtShoes and Ht have very whigh collinearity, which makes sense.
+- HtShoes and Ht have very high collinearity, which makes sense.
 
 ```{r}
 round(cor(seatpos), 3)

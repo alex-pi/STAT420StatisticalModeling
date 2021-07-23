@@ -1,11 +1,12 @@
 ---
-title: "Week 9 - Homework"
-author: "STAT 420, Summer 2021, D. Unger"
+title: "Week 9 - Homework - STAT 420, Summer 2021"
+author: "Alejandro Pimentel (ap41)"
 date: ''
 output:
   html_document: 
     theme: readable
-    toc: yes
+    toc: yes  
+    code_folding: show
   pdf_document: default
 urlcolor: cyan
 editor_options: 
@@ -92,15 +93,6 @@ diagnostics <- function(model, pcol = "grey", lcol = "dodgerblue",
 
 ```
 
-# Directions
-
-Students are encouraged to work together on homework. However, sharing, copying or providing any part of a homework solution or code is an infraction of the University's rules on Academic Integrity. Any violation will be punished as severely as possible.
-
-- Be sure to remove this section if you use this `.Rmd` file as a template.
-- You may leave the questions in your final document.
-
-***
-
 ```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
 options(scipen = 1, digits = 4, width = 80, fig.align = "center")
 ```
@@ -120,6 +112,7 @@ View(longley)
 
 ```{r}
 # Get the correlation matrix and setting 0 in the diagonal
+cor(longley)
 cor_0_on_diag <- cor(longley) * !diag(ncol(longley))
 
 max_cor_val <- max(cor_0_on_diag)
@@ -127,9 +120,9 @@ pred_names <- row.names(which(cor_0_on_diag == max_cor_val, arr.ind = TRUE))
 
 ```
 
-The largest correlation value is **`r max_cor_val`**, between variables **`r pred_names[1]`** and **`r pred_names[2]`**.
+The largest correlation value is **`r max_cor_val`**, between predictors **`r pred_names[1]`** and **`r pred_names[2]`**.
 
-**(b)** Fit a model with `Employed` as the response and the remaining variables as predictors. Calculate and report the variance inflation factor (VIF) for each of the predictors. Which variable has the largest VIF? Do any of the VIFs suggest multicollinearity?
+**(b)** Fit a model with `Employed` as the response and the remaining variables as predictors. Calculate and report the variance inflation factor (VIF) for each of the predictors. Which variable has the largest VIF? Do any of the VIFs suggests multicollinearity?
 
 **Solution**
 
@@ -143,11 +136,13 @@ max_vif <- longley_vif[longley_vif==max(longley_vif)]
 large_vif_preds <- names(longley_vif > 5)
 ```
 
-The predictor `r names(max_vif)[1]` has the largest `VIF` with a value of **`r max_vif[1]`**.
+The predictor **`r names(max_vif)[1]`** has the largest `VIF` with a value of **`r max_vif[1]`**.
 
 The following `predictors` have a `VIF` greater than 5, which suggest multicollinearity: **`r paste(large_vif_preds, collapse=", ")`**
 
 **(c)** What proportion of the observed variation in `Population` is explained by a linear relationship with the other predictors?
+
+**Solution**
 
 ```{r}
 mod_1c <- lm(Population ~ . - Employed, data = longley)
@@ -169,6 +164,8 @@ mod_1d_no_pop <- lm(Employed ~ . - Population, data = longley)
 
 The partial correlation coefficient for `Population` and `Employed` is **`r pcres_emp_pop`**.
 
+With such a small coefficient, adding `Population` to the model won't help much.
+
 **(e)** Fit a new model with `Employed` as the response and the predictors from the model in **(b)** that were significant. (Use $\alpha = 0.05$.) Calculate and report the variance inflation factor for each of the predictors. Which variable has the largest VIF? Do any of the VIFs suggest multicollinearity?
 
 **Solution**
@@ -178,6 +175,7 @@ At $\alpha = 0.05$ the significant coefficients in model `mod_1b` are:
 ```{r}
 mod_1b_coefs <- summary(mod_1b)$coef
 alpha <- 0.05
+# Select the coefficients that are lower than 0.05
 (signif_coefs <- mod_1b_coefs[mod_1b_coefs[, 4] < alpha, ])
 ```
 
@@ -231,7 +229,7 @@ The p-value is `r p_val`.
 (stat_decision <- stat_decide(p_val, alpha))
 ```
 
-With $\alpha = 0.05$ we `r stat_decision`.
+With $\alpha = 0.05$ we **`r stat_decision`**.
 
 - Which model you prefer, **(b)** or **(e)**
 
@@ -257,6 +255,8 @@ plot_qq = function(model, pointcol = "dodgerblue", linecol = "darkorange") {
   qqline(resid(model), col = linecol, lwd = 2)
 }
 ```
+
+**Solution**
 
 ```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
 par(mfrow = c(1, 2), bg="ghostwhite")
@@ -404,6 +404,8 @@ get_adj_r2 = function(model) {
 }
 ```
 
+**Solution**
+
 I start with big model using 2-way
 
 ```{r}
@@ -419,9 +421,6 @@ mod_b_big <- lm(Balance ~ (Limit +
 mod_b <- step(mod_b_big, 
                 direction = "backward"
                , trace = 0)
-
-diags <- diagnostics(mod_b, 
-                     detailed = TRUE, plotit = TRUE)
 ```
 
 ```{r}
@@ -437,7 +436,7 @@ get_num_params(mod_b)
 
 For this exercise, use the `Sacramento` data from the `caret` package. Use the following code to perform some preprocessing of the data.
 
-```{r}
+```{r echo = FALSE}
 library(caret)
 library(ggplot2)
 data(Sacramento)
@@ -452,7 +451,7 @@ Use `?Sacramento` to learn more about this dataset.
 
 A plot of longitude versus latitude gives us a sense of where the city limits are.
 
-```{r}
+```{r, fig.align = "center"}
 qplot(y = longitude, x = latitude, data = sac_data,
       col = limits, main = "Sacramento City Limits ")
 ```
@@ -470,6 +469,8 @@ The training data should be used for all model fitting. Our goal is to find a mo
 
 **(a)** Find a "good" model for `price`. Use any methods seen in class. The model should reach a LOOCV-RMSE below 77,500 in the training data. Do not use any transformations of the response variable.
 
+**Solution**
+
 ```{r}
 
 #pairs(sac_trn_data)
@@ -484,6 +485,7 @@ big_price_mod <- lm(price ~ (
                      ) ^ 2
                        , data = sac_trn_data)
 
+# Using BIC backward search
 bic_price_mod <- step(big_price_mod
                 ,direction = "backward"
                 ,k = log(nrow(sac_trn_data))
@@ -495,6 +497,8 @@ get_loocv_rmse(bic_price_mod)
 
 
 **(b)** Is a model that achieves a LOOCV-RMSE below 77,500 useful in this case? That is, is an average error of 77,500 low enough when predicting home prices? To further investigate, use the held-out test data and your model from part **(a)** to do two things:
+
+**Solution**
 
 - Calculate the average percent error:
 \[
@@ -524,9 +528,15 @@ abline(0, 1, col = "darkorange", lwd = 2)
 ```
 
 
-Based on all of this information, argue whether or not this model is useful.
+*Based on all of this information, argue whether or not this model is useful.*
 
-We can see from the graph that most predictions are either overestimating or underestimating sometimes for as much as `hundreds of thousands of dollars`. 
+We can see from the graph that most predictions are either `overestimating` or `underestimating` sometimes for as much as `hundreds of thousands of dollars`. This is due to having a relatively high `Average Percentage Error`.
+
+It seems from the graph that the `model` is doing better with prices under `300,000 USD`, while the errors seem to be larger with higher prices. Perhaps this is due to having more observation in the lower range of prices.
+
+I would consider the `model` useful, but I would also have some reservations about it.
+
+Now, from a more subjective/practical point of view.
 
 If I am buyer in the market, predictions like this are really no that informative. That said, the results of the model can be `useful` to give a very general idea of what prices I am looking at as a buyer. But the model is definitely `not useful` to make final decisions by in itself, perhaps almost any model is.
 
@@ -640,6 +650,8 @@ Calculate the rate of false positives and negatives for both AIC and BIC. Compar
 
 **solution**
 
+Initialize some variables.
+
 ```{r}
 birthday = 19820426
 set.seed(birthday)
@@ -650,6 +662,10 @@ num_sims <- 300
 
 ```
 
+Define 2 functions to help us during the simulation:
+
+- First on to simulate data and train a model based on that.
+- Second counts the `False Positive and Negative` picks of predictors made by the `step` function.
 
 ```{r}
 generate_mlr_data <- function(X, betas, sigma = 2) {
@@ -661,45 +677,36 @@ generate_mlr_data <- function(X, betas, sigma = 2) {
   
 }
 
-get_fn_fp <- function(model) {
+# It's weird that I have to keep sim_data in the scope where
+# I call step(), otherwise it throws an error... go figure.
+get_fn_fp <- function(model, sim_data) {
   aic_coef_names <- names(step(model, direction = "backward", 
              trace = 0)$coef)
   
   bic_coef_names <- names(step(model, direction = "backward", 
            k = log(n), trace = 0)$coef)
   
-  r <- list(
+  list(
     aic_fn = sum(!(signif %in% aic_coef_names)),
     aic_fp = sum(aic_coef_names %in% not_sig),      
     bic_fn = sum(!(signif %in% bic_coef_names)),
     bic_fp = sum(bic_coef_names %in% not_sig)    
   )
-  
-  #print("-------")
-  #print(aic_coef_names)
-  #print(paste(r$aic_fn, r$aic_fp))
-  #print(bic_coef_names)
-  #print(paste(r$bic_fn, r$bic_fp))
-  #print("-------")  
-  
-  r
 }
 
 ```
 
-```{r}
+We define a function that executes the simulation. Then we call it to start the simulation.
 
+```{r}
 run_sim <- function(X, betas, sigma) {
-#run_sim <- function() {
   fn_count <- c(0, 0)
   fp_count <- c(0, 0)
   
   for(i in 1:num_sims) {
-    daataa <- generate_mlr_data(X, matrix(betas), sigma)
-    #print(head(daataa))
-    sim_model <- lm(y ~ ., data = daataa)
-    
-    stats <- get_fn_fp(sim_model)
+    sim_data <- generate_mlr_data(X, matrix(betas), sigma)
+    sim_model <- lm(y ~ ., data = sim_data)
+    stats <- get_fn_fp(sim_model, sim_data)
     
     fn_count[1] <- stats$aic_fn + fn_count[1]
     fn_count[2] <- stats$bic_fn + fn_count[2]
@@ -712,20 +719,22 @@ run_sim <- function(X, betas, sigma) {
 }
 
 result_sim <- run_sim(X, betas, sigma)
-
 ```
+
+The following table shows the results for the simulation.
 
 ```{r}
 tdata <- data.frame(
   "fn" = result_sim$fn,
   "fp" = result_sim$fp,
-  "fn_rate" = result_sim$fn / (num_sims * 5),
-  "fp_rate" = result_sim$fp / (num_sims * 5)
+  "fn_rate" = result_sim$fn / num_sims,
+  "fp_rate" = result_sim$fp / num_sims
 )
 
 gen_kable(tdata, row_names = c("AIC", "BIC"),
           col_names = c("False Negatives", "False Positives",
-                        "FN Rate", "FP Rate"))
+                        "FN Rate", "FP Rate"),
+          caption = "Predictor picks (Backward Search)")
 
 ```
 
@@ -759,7 +768,9 @@ sim_data_2 = data.frame(x_1, x_2, x_3, x_4, x_5, x_6, x_7, x_8, x_9, x_10,
 )
 ```
 
-**solution**
+**Solution**
+
+Initialize some variables.
 
 ```{r}
 birthday = 19820426
@@ -767,10 +778,11 @@ set.seed(birthday)
 
 X <- sim_data_2[, 1:10]
 betas <- c(1, -1, 2, -2, 1, 1, rep(0, 5))
-num_sims <- 30
+num_sims <- 300
 
 ```
 
+Start the simulation and show the results.
 
 ```{r}
 result_sim <- run_sim(X, betas, sigma)
@@ -778,15 +790,31 @@ result_sim <- run_sim(X, betas, sigma)
 tdata <- data.frame(
   "fn" = result_sim$fn,
   "fp" = result_sim$fp,
-  "fn_rate" = result_sim$fn / (num_sims * 5),
-  "fp_rate" = result_sim$fp / (num_sims * 5)
+  "fn_rate" = result_sim$fn / num_sims,
+  "fp_rate" = result_sim$fp / num_sims
 )
 
 gen_kable(tdata, row_names = c("AIC", "BIC"),
           col_names = c("False Negatives", "False Positives",
-                        "FN Rate", "FP Rate"))
+                        "FN Rate", "FP Rate"),
+          caption = "Predictor picks (Backward Search)")
 
 ```
+
+In this case the model `search` is expected to have **more** `False Positive` and `False Negative` errors since we established in the data definition that *2 of the known significant predictors*, namely $x_1$ and $x_2$, have collinearity issues with $x_8$, $x_9$ and $x_{10}$.
+
+We can verify that as shown below:
+
+```{r}
+cor_matrix <- round(cor(X), 4)
+```
+
+- $x_1$ Collinearity with $x_8$ = `r cor_matrix[1, 8]`
+- $x_1$ Collinearity with $x_9$ = `r cor_matrix[1, 9]`
+- $x_2$ Collinearity with $x_10$ = `r cor_matrix[2, 10]`
+
+Under these conditions, the `step` function can for instance select $x_8$ instead of $x_1$. This behavior might not have a big effect in `prediction` but it will increase the `variance` of our estimated $\hat\beta$ parameters.
+
 
 
 

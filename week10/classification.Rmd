@@ -1,0 +1,163 @@
+---
+title: "classification"
+author: "AP"
+date: "7/20/2021"
+output: html_document
+---
+
+```{r}
+install.packages("kernlab")
+library(kernlab)
+data("spam")
+tibble::as.tibble(spam)
+```
+
+```{r}
+is.factor(spam$type)
+levels(spam$type)
+```
+
+```{r}
+set.seed(42)
+# spam_idx = sample(nrow(spam), round(nrow(spam) / 2))
+spam_idx = sample(nrow(spam), 1000)
+spam_trn = spam[spam_idx, ]
+spam_tst = spam[-spam_idx, ]
+```
+
+Since we are using the results of the model as a classifier, we really do not case about the $\hat\beta$ estimates. As long as it works well as a classifier...
+
+```{r}
+fit_caps = glm(type ~ capitalTotal, 
+               data = spam_trn, family = binomial)
+```
+```{r}
+fit_selected = glm(type ~ edu + money + capitalTotal + charDollar, 
+                   data = spam_trn, family = binomial)
+```
+
+```{r}
+fit_additive = glm(type ~ ., 
+                   data = spam_trn, family = binomial)
+```
+
+```{r}
+# maxit, with enough iterations it converges and we remoe one warning
+fit_over = glm(type ~ capitalTotal * (.), 
+               data = spam_trn, family = binomial, maxit = 100)
+```
+
+### Evaluating Classifiers
+
+This rate is not telling us if we are overfitting. Here the largest model would have the lowest rate. But, we do not know how it would do with unseen data.
+
+```{r}
+mean(ifelse(predict(fit_caps) > 0, "spam", "nonspam") != spam_trn$type)
+## [1] 0.339
+mean(ifelse(predict(fit_selected) > 0, "spam", "nonspam") != spam_trn$type)
+## [1] 0.224
+mean(ifelse(predict(fit_additive) > 0, "spam", "nonspam") != spam_trn$type)
+## [1] 0.066
+mean(ifelse(predict(fit_over) > 0, "spam", "nonspam") != spam_trn$type)
+## [1] 0.136
+```
+
+For logistic regression we can't use LOOCV, so we actually need to do a 5 or 10 fold test.
+
+The rate lowers until the model is large enough to be considered as overffiting. In this case `fit_additive`, seems to be the best model.
+
+```{r, warning=FALSE, message=FALSE}
+library(boot)
+set.seed(1)
+cv.glm(spam_trn, fit_caps, K = 5)$delta[1]
+## [1] 0.2166961
+cv.glm(spam_trn, fit_selected, K = 5)$delta[1]
+## [1] 0.1587043
+cv.glm(spam_trn, fit_additive, K = 5)$delta[1]
+## [1] 0.08684467
+cv.glm(spam_trn, fit_over, K = 5)$delta[1]
+## [1] 0.14
+```
+
+From this point we evaluate the picked model using **the test data only**.
+
+```{r}
+make_conf_mat = function(predicted, actual) {
+  table(predicted = predicted, actual = actual)
+}
+```
+
+```{r}
+spam_tst_pred = ifelse(predict(fit_additive, spam_tst) > 0, 
+                       "spam", 
+                       "nonspam")
+spam_tst_pred = ifelse(predict(fit_additive, spam_tst, type = "response") > 0.5, 
+                       "spam", 
+                       "nonspam")
+```
+
+```{r}
+(conf_mat_50 = make_conf_mat(predicted = spam_tst_pred, actual = spam_tst$type))
+```
+
+Correct classification rate.
+
+```{r}
+mean(spam_tst_pred == spam_tst$type)
+sum(spam_tst_pred == spam_tst$type) # TP + TN
+```
+
+Missclasification Rate.
+
+```{r}
+mean(spam_tst_pred != spam_tst$type) 
+sum(spam_tst_pred != spam_tst$type) # FP + FN
+```
+
+Sensitivity is essentially the true positive rate. So when sensitivity is high, the number of false negatives is low.
+
+$$
+\text{Sens} = \text{True Positive Rate} = \frac{\text{TP}}{\text{P}} = \frac{\text{TP}}{\text{TP + FN}}
+$$
+
+```{r}
+get_sens = function(conf_mat) {
+  conf_mat[2, 2] / sum(conf_mat[, 2])
+}
+
+get_sens(conf_mat_50)
+```
+
+Specificity is essentially the true negative rate. So when specificity is high, the number of false positives is low.
+
+$$
+\text{Spec} = \text{True Negative Rate} = \frac{\text{TN}}{\text{N}} = \frac{\text{TN}}{\text{TN + FP}}
+$$
+
+```{r}
+get_spec =  function(conf_mat) {
+  conf_mat[1, 1] / sum(conf_mat[, 1])
+}
+
+get_spec(conf_mat_50)
+```
+
+We can change the cut-off of the classifier to trade off Spec Vs Sens.
+
+```{r}
+spam_tst_pred_90 = ifelse(predict(fit_additive, spam_tst, type = "response") > 0.9, 
+                          "spam", 
+                          "nonspam")
+```
+
+```{r}
+(conf_mat_90 = make_conf_mat(predicted = spam_tst_pred_90, actual = spam_tst$type))
+```
+
+Now we have less `False Positives` (less likely to classify an good emails as spam) but much more `False Negatives` (more likely yo get spam in inbox).
+
+
+
+
+
+
