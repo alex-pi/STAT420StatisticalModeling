@@ -1,6 +1,6 @@
 ---
-title: "Week 10 - Homework"
-author: "STAT 420, Summer 2021, D. Unger"
+title: "Week 10 - Homework - STAT 420, Summer 2021"
+author: "Alejandro Pimentel (ap41)"
 date: ''
 output:
   html_document: 
@@ -127,6 +127,8 @@ Store the test statistics for two tests:
 
 **Solution**
 
+Initizalize some variables.
+
 ```{r}
 num_sims <- 2500
 betas <- c(0.4, -0.35, 0, 0)
@@ -136,6 +138,9 @@ X <- cbind(x1, x2, x3)
 dof <- 4 - 2
 ```
 
+Two functions:
+- Simulate data with a binary response.
+- Run the simulation and save the required values.
 
 ```{r}
 sim_logistic_data = function(X, betas) {
@@ -143,7 +148,6 @@ sim_logistic_data = function(X, betas) {
   eta = X_full %*% betas
   p = 1 / (1 + exp(-eta))
   y = rbinom(n = nrow(X), size = 1, prob = p)
-  #print(cbind(X, y))
   as.data.frame(cbind(X, y))
 }
 
@@ -158,13 +162,11 @@ loop_simulation <- function (X, betas, num_simulations = 2500) {
     full_model <- glm(y ~ ., data = sim_data, family = binomial)
     wald_test[i] <- summary(full_model)$coef[3, "z value"]
     wald_pval[i] <- summary(full_model)$coef[3, "Pr(>|z|)"]
-    #print(wald_test[i])
     
     null_model <- glm(y ~ x1, data = sim_data, family = binomial)
     ano_lrt <- anova(null_model, full_model, test = "LRT")
     lrt_test[i] <- ano_lrt$Deviance[2]
     lrt_pval[i] <- ano_lrt[2, "Pr(>Chi)"]
-    #print(lrt_test[i])
   }
   list(wald_test=wald_test, 
        wald_pval=wald_pval,
@@ -274,6 +276,7 @@ x3 = rnorm(n = sample_size)
 ```{r, warning=FALSE}
 # X matrix changes, betas remain the same
 X <- cbind(x1, x2, x3)
+# Running simulation
 sim_resultf <- loop_simulation(X, betas, num_simulations = 2500)
 
 ```
@@ -320,6 +323,9 @@ gen_kable(cbind(c(wt_large_proportion, wt_small_proportion),
 
 ```
 
+In our true model we now that $\beta_2=0$ and $\beta_3=0$, so from the `LRT` test we expect to `Reject the Null Hypothesis`. In the table above we see that using $\alpha=0.05$, we have a larger proportion of `Rejections of the Null Hypothesis` compared to what we get with the small sample. In this case the `small sample` might not be large enough to use a $\chi^2$ distribution successfully.
+
+**Why the wlad test seems perfect?**
 
 ***
 
@@ -328,8 +334,6 @@ gen_kable(cbind(c(wt_large_proportion, wt_small_proportion),
 For this exercise use the `ptitanic` data from the `rpart.plot` package. (The `rpart.plot` package depends on the `rpart` package.) Use `?rpart.plot::ptitanic` to learn about this dataset. We will use logistic regression to help predict which passengers aboard the [Titanic](https://en.wikipedia.org/wiki/RMS_Titanic) will survive based on various attributes.
 
 ```{r, message = FALSE, warning = FALSE}
-# install.packages("rpart")
-# install.packages("rpart.plot")
 library(rpart)
 library(rpart.plot)
 data("ptitanic")
@@ -377,17 +381,17 @@ model_2a <- glm(survived ~ pclass + sex + age + sex:age,
 
 ```
 
-The `deviance` of this model is **`r model_2a$deviance`**
+The `deviance` of this model is **`r model_2a$deviance`**.
 
 **(b)** Use the model fit in **(a)** and an appropriate statistical test to determine if class played a significant role in surviving on the Titanic. Use $\alpha = 0.01$. Report:
 
-- The null hypothesis of the test
+- The null hypothesis of the test.
 
 $$
 H_0: \beta_1 = \beta_2 = 0
 $$
 
-- The test statistic of the test
+- The test statistic of the test.
 
 ```{r}
 model_2b <- glm(survived ~ sex + age + sex:age, data = ptitanic_trn,
@@ -396,17 +400,17 @@ model_2b <- glm(survived ~ sex + age + sex:age, data = ptitanic_trn,
 (test_stat <- anova(model_2b, model_2a, test = "LRT")[2, "Deviance"])
 ```
 
-The value for the `test statistic` is **`r test_stat`**
+The value for the `test statistic` is **`r test_stat`**.
 
-- The p-value of the test
+- The p-value of the test.
 
 ```{r}
 (pvalue <- anova(model_2b, model_2a, test = "LRT")[2, "Pr(>Chi)"])
 ```
 
-The `p-value` for the `test statistic` is **`r pvalue`**
+The `p-value` for the `test statistic` is **`r fr(pvalue)`**.
 
-- A statistical decision
+- A statistical decision.
 
 ```{r}
 stat_decide <- function(p_value, alpha = 0.01) {
@@ -416,7 +420,7 @@ stat_decide <- function(p_value, alpha = 0.01) {
 stat_decide(pvalue)
 ```
 
-- A practical conclusion
+- A practical conclusion.
 
 The `pclass` predictor seems to have a significant role on our response variable `survived`.
 
@@ -449,7 +453,7 @@ The value for the `test statistic` is **`r test_stat`**
 (pvalue <- anova_2c[2, "Pr(>Chi)"])
 ```
 
-The `p-value` for the `test statistic` is **`r pvalue`**
+The `p-value` for the `test statistic` is **`r fr(pvalue)`**
 
 - A statistical decision
 
@@ -491,9 +495,9 @@ confusion_mat <- make_conf_mat(sruv_tst_pred, ptitanic_tst$survived)
 
 ```
 
-- Misclassification rate: **r` misclass_rate`**.
-- Sensitivity: **r` sensitivity`**.
-- Specificity rate: **r` specificity`**.
+- Misclassification rate: **`r` misclass_rate`**.
+- Sensitivity: **`r` sensitivity`**.
+- Specificity rate: **`r` specificity`**.
 
 ***
 
@@ -526,7 +530,9 @@ wisc_test$class <- as.factor(wisc_test$class)
 
 ```
 
-```{r}
+Fitting the model.
+
+```{r, warning=FALSE, message=FALSE}
 wisc_add_3 <- glm(class ~ radius + smoothness + texture,
                 data = wisc_train, family = binomial)
 
@@ -540,6 +546,7 @@ wisc_aic <- step(wisc_big, direction = "backward",
                  trace = 0)
 ```
 
+Calculating the `misclassification rate`.
 
 ```{r, warning=FALSE, message=FALSE}
 library(boot)
@@ -547,9 +554,13 @@ library(boot)
 
 (wisc_add_all_rt <- cv.glm(wisc_train, wisc_add_all, K = 5)$delta[1])
 
-(wisc_aic <- cv.glm(wisc_train, wisc_aic, K = 5)$delta[1])
+(wisc_aic_rt <- cv.glm(wisc_train, wisc_aic, K = 5)$delta[1])
 ```
 
+- The best model in this case is `wisc_add_3` (radius + smoothness + texture).
+- The misclassification rate for that model is: **`r wisc_add_3_rt`**.
+
+Relative to `wisc_add_3`, `wisc_add_all` and `wisc_aic` are underfitting.
 
 **(b)** In this situation, simply minimizing misclassifications might be a bad goal since false positives and false negatives carry very different consequences. Consider the `M` class as the "positive" label. Consider each of the probabilities stored in `cutoffs` in the creation of a classifier using the **additive** model fit in **(a)**.
 
