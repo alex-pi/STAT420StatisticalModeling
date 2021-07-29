@@ -139,6 +139,7 @@ dof <- 4 - 2
 ```
 
 Two functions:
+
 - Simulate data with a binary response.
 - Run the simulation and save the required values.
 
@@ -185,12 +186,12 @@ sim_result <- loop_simulation(X, betas, num_simulations = 2500)
 
 ```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
 
-ztest_graph <- function(ztests) {
+ztest_graph <- function(ztests, color = "deepskyblue3") {
   par(mfrow = c(1, 1), bg="ghostwhite")
   hist(ztests, probability = TRUE, breaks = 15,
      xlab = "Wald test values", 
      main = "Wald Test Distribution", 
-     col = "deepskyblue3",
+     col = color,
      border = "aliceblue")
   
   curve(dnorm(x),
@@ -226,12 +227,12 @@ ztest_graph(sim_result$wald_test)
 
 ```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
 
-lrt_graph <- function(lrt_tests, dof) {
+lrt_graph <- function(lrt_tests, dof, color = "deepskyblue3") {
   par(mfrow = c(1, 1), bg="ghostwhite")
   hist(lrt_tests, probability = TRUE, breaks = 15,
      xlab = "LRT values", 
      main = "LRT Distribution", 
-     col = "deepskyblue3",
+     col = color,
      border = "aliceblue")
   
   curve(dchisq(x, df = dof),
@@ -281,8 +282,10 @@ sim_resultf <- loop_simulation(X, betas, num_simulations = 2500)
 
 ```
 
+*Checking `Wald Test` values*
+
 ```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
-ztest_graph(sim_resultf$wald_test)
+ztest_graph(sim_resultf$wald_test, color = "gray")
 
 (emp_prob_gt1f <- mean(sim_resultf$wald_test > 1))
 ```
@@ -291,8 +294,12 @@ ztest_graph(sim_resultf$wald_test)
 
 - Using the `true distribution`, $P[X > 1] = `r true_prob_gt1`$, where $X$ is a random variable.
 
+*This shows evidence that the sample distribution for the `small sample` has changed and it might not be good enough for testing.*
+
+*Checking `LRT Test` values*
+
 ```{r, fig.height = 4, fig.width = 7, fig.align = "center"}
-lrt_graph(sim_resultf$lrt_test, dof)
+lrt_graph(sim_resultf$lrt_test, dof, color = "gray")
 
 (emp_prob_gt5f <- mean(sim_resultf$lrt_test > 5))
 ```
@@ -300,6 +307,10 @@ lrt_graph(sim_resultf$lrt_test, dof)
 - Using the `simulated LRT tests` from small sample, $P[lrttest > 5] = `r emp_prob_gt5f`$.
 
 - Using the `true chi distribution`, $P[X > 5] = `r true_prob_gt5`$, where $X$ is a random variable.
+
+*This shows evidence that the sample distribution for the `small sample` has changed and it might not be good enough for testing.*
+
+*We can go a step forward and take a look at the `statistical decisions` with $\alpha = 0.05$.*
 
 ```{r}
 stat_decide <- function(p_value, alpha = 0.05) {
@@ -323,9 +334,7 @@ gen_kable(cbind(c(wt_large_proportion, wt_small_proportion),
 
 ```
 
-In our true model we now that $\beta_2=0$ and $\beta_3=0$, so from the `LRT` test we expect to `Reject the Null Hypothesis`. In the table above we see that using $\alpha=0.05$, we have a larger proportion of `Rejections of the Null Hypothesis` compared to what we get with the small sample. In this case the `small sample` might not be large enough to use a $\chi^2$ distribution successfully.
-
-**Why the wlad test seems perfect?**
+From our true model we know that $\beta_2=0$ and $\beta_3=0$, so from the `LRT` test we expect to `Reject the Null Hypothesis`. In the table above we see that using $\alpha=0.05$, we have a larger proportion of `Rejections of the Null Hypothesis` for the `large sample` compared to what we get with the `small sample`. In this case the `small sample` might not be large enough to use a $\chi^2$ distribution successfully.
 
 ***
 
@@ -430,8 +439,6 @@ The `pclass` predictor seems to have a significant role on our response variable
 model_2c <- glm(survived ~ pclass + sex + age, 
                 data = ptitanic_trn, family = binomial)
 
-anova_2c <- anova(model_2c, model_2a, test = "LRT")
-
 ```
 
 - The null hypothesis of the test
@@ -442,7 +449,7 @@ $$
 - The test statistic of the test
 
 ```{r}
-(test_stat <- anova_2c[2, "Deviance"])
+(test_stat <- summary(model_2a)$coef[6, "z value"])
 ```
 
 The value for the `test statistic` is **`r test_stat`**
@@ -450,7 +457,7 @@ The value for the `test statistic` is **`r test_stat`**
 - The p-value of the test
 
 ```{r}
-(pvalue <- anova_2c[2, "Pr(>Chi)"])
+(pvalue <- summary(model_2a)$coef[6, "Pr(>|z|)"])
 ```
 
 The `p-value` for the `test statistic` is **`r fr(pvalue)`**
@@ -458,7 +465,7 @@ The `p-value` for the `test statistic` is **`r fr(pvalue)`**
 - A statistical decision
 
 ```{r}
-stat_decide(pvalue)
+stat_decide(pvalue, alpha = 0.01)
 ```
 
 - A practical conclusion
@@ -495,9 +502,9 @@ confusion_mat <- make_conf_mat(sruv_tst_pred, ptitanic_tst$survived)
 
 ```
 
-- Misclassification rate: **`r` misclass_rate`**.
-- Sensitivity: **`r` sensitivity`**.
-- Specificity rate: **`r` specificity`**.
+- Misclassification rate: **`r misclass_rate`**.
+- Sensitivity: **`r sensitivity`**.
+- Specificity rate: **`r specificity`**.
 
 ***
 
@@ -530,7 +537,7 @@ wisc_test$class <- as.factor(wisc_test$class)
 
 ```
 
-Fitting the model.
+Fitting the models.
 
 ```{r, warning=FALSE, message=FALSE}
 wisc_add_3 <- glm(class ~ radius + smoothness + texture,
@@ -560,7 +567,7 @@ library(boot)
 - The best model in this case is `wisc_add_3` (radius + smoothness + texture).
 - The misclassification rate for that model is: **`r wisc_add_3_rt`**.
 
-Relative to `wisc_add_3`, `wisc_add_all` and `wisc_aic` are underfitting.
+Relative to `wisc_add_3` (`radius + smoothness + texture`), `wisc_add_all` and `wisc_aic` are **overfitting**.
 
 **(b)** In this situation, simply minimizing misclassifications might be a bad goal since false positives and false negatives carry very different consequences. Consider the `M` class as the "positive" label. Consider each of the probabilities stored in `cutoffs` in the creation of a classifier using the **additive** model fit in **(a)**.
 
@@ -593,7 +600,7 @@ for (i in 1:num_cutoffs) {
   
   (sensitivity_values[i] <- get_sens(confusion_mat))
   
-  (specificity_values[i] <- get_spec(confusion_mat))  
+  (specificity_values[i] <- get_spec(confusion_mat))
 }
 
 ```
@@ -605,16 +612,26 @@ plot(cutoffs, sensitivity_values,
       main = "Sensitivity and Specificity tradeoff",
       xlab = "Cutoff values",
       ylab = "",
+      ylim = c(0.59, 1.0),
       panel.first = grid(),
       col = "deepskyblue3", lwd = 2, 
       pch=15, type="l")
 lines(cutoffs, specificity_values, 
       col = "darkorange", lwd = 2)
 
-legend("left", c("Sensitivity", "Specificity"), 
-     lty = c(1, 1),
+abline(v = c(0.1, 0.3), col = "gray", lwd = 2, lty = 2)
+
+legend("bottomright", c("Sensitivity", "Specificity", "Proposed cutoff area"), 
+     lty = c(1, 1, 2),
      lwd = 2,
-     col = c("deepskyblue3", "darkorange"))
+     col = c("deepskyblue3", "darkorange", "gray"))
 
 ```
+
+In this case we **do not want** many `False Negative` errors. In other words, we want to **minimize** the chances of missing actual `Malignant Tumors`. This will increase the `False Positive` errors, which is less costly in this context.
+
+Thus, we are looking for a cutoff with high Sensitivity. We can easily discard cutoffs after *~0.8* as `Sensitivity` drops faster after that point.
+
+For this particular case, a reasonable cutoff could be between **0.1** and **0.3**. But that is a subjective decision, expert advice in the field will help to make this decision.
+
 
